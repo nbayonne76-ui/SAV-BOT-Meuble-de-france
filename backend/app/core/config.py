@@ -1,8 +1,9 @@
 # backend/app/core/config.py
 """
-Configuration simplifiee qui charge directement depuis .env
+Configuration management with environment validation
 """
 import os
+import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -10,57 +11,137 @@ from dotenv import load_dotenv
 backend_dir = Path(__file__).parent.parent.parent
 env_path = backend_dir / ".env"
 
-print(f"[CONFIG] Chargement .env depuis: {env_path}")
-print(f"[CONFIG] Fichier existe: {env_path.exists()}")
+# Load .env file
+if env_path.exists():
+    load_dotenv(env_path, override=True)
+else:
+    # Try parent directory
+    parent_env = backend_dir.parent / ".env"
+    if parent_env.exists():
+        load_dotenv(parent_env, override=True)
 
-# Forcer le rechargement
-load_dotenv(env_path, override=True)
 
-# Charger les variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-SECRET_KEY = os.getenv("SECRET_KEY", "default-secret-key")
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8000"))
-DEBUG = os.getenv("DEBUG", "True").lower() == "true"
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "../uploads")
-MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "10485760"))
-ALLOWED_EXTENSIONS = os.getenv("ALLOWED_EXTENSIONS", "jpg,jpeg,png,heic,mp4,mov,avi")
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000")
-APP_NAME = os.getenv("APP_NAME", "Meuble de France Chatbot")
-APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
+class Settings:
+    """Application settings loaded from environment variables"""
 
-# Validation
-if not OPENAI_API_KEY:
-    raise ValueError("[ERREUR] OPENAI_API_KEY non trouvee dans .env!")
+    def __init__(self):
+        # ===================
+        # Core Settings
+        # ===================
+        self.APP_NAME = os.getenv("APP_NAME", "Meuble de France Chatbot")
+        self.APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
+        self.DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+        self.HOST = os.getenv("HOST", "0.0.0.0")
+        self.PORT = int(os.getenv("PORT", "8000"))
 
-print(f"[CONFIG] OPENAI_API_KEY chargee: {OPENAI_API_KEY[:20]}...")
+        # ===================
+        # Security Settings
+        # ===================
+        # Secret key for JWT - MUST be set in production
+        self.SECRET_KEY = os.getenv("SECRET_KEY")
+        if not self.SECRET_KEY:
+            if self.DEBUG:
+                # Generate a random key for development
+                self.SECRET_KEY = secrets.token_urlsafe(32)
+            else:
+                raise ValueError(
+                    "SECRET_KEY must be set in production! "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+                )
 
-# Helper properties
+        # JWT Settings
+        self.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+        self.REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+
+        # ===================
+        # Database Settings
+        # ===================
+        self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
+
+        # Warn if using SQLite in non-debug mode
+        if not self.DEBUG and self.DATABASE_URL.startswith("sqlite"):
+            print("[WARNING] Using SQLite in production is not recommended!")
+
+        # ===================
+        # Redis Settings
+        # ===================
+        self.REDIS_URL = os.getenv("REDIS_URL", "memory://")  # Use memory in development
+
+        # ===================
+        # API Keys
+        # ===================
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        if not self.OPENAI_API_KEY:
+            raise ValueError(
+                "[ERROR] OPENAI_API_KEY not found in environment! "
+                "Please set it in your .env file."
+            )
+
+        # ===================
+        # Upload Settings
+        # ===================
+        self.UPLOAD_DIR = os.getenv("UPLOAD_DIR", "../uploads")
+        self.MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", "10485760"))  # 10MB
+        self.ALLOWED_EXTENSIONS = os.getenv(
+            "ALLOWED_EXTENSIONS",
+            "jpg,jpeg,png,gif,heic,mp4,mov,avi,webm"
+        )
+
+        # ===================
+        # CORS Settings
+        # ===================
+        self.CORS_ORIGINS = os.getenv(
+            "CORS_ORIGINS",
+            "http://localhost:5173,http://localhost:3000"
+        )
+
+        # ===================
+        # Rate Limiting
+        # ===================
+        self.RATE_LIMIT_DEFAULT = os.getenv("RATE_LIMIT_DEFAULT", "100/minute")
+        self.RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "5/minute")
+
+        # ===================
+        # Computed Properties
+        # ===================
+        self.cors_origins_list = [
+            origin.strip() for origin in self.CORS_ORIGINS.split(",")
+            if origin.strip()
+        ]
+        self.allowed_extensions_list = [
+            ext.strip().lower() for ext in self.ALLOWED_EXTENSIONS.split(",")
+            if ext.strip()
+        ]
+
+    def __repr__(self):
+        """Safe representation without exposing secrets"""
+        return (
+            f"Settings("
+            f"APP_NAME={self.APP_NAME!r}, "
+            f"DEBUG={self.DEBUG}, "
+            f"HOST={self.HOST!r}, "
+            f"PORT={self.PORT}"
+            f")"
+        )
+
+
+# Create global settings instance
+settings = Settings()
+
+# Log configuration status (safe info only)
+if settings.DEBUG:
+    print(f"[CONFIG] App: {settings.APP_NAME} v{settings.APP_VERSION}")
+    print(f"[CONFIG] Debug mode: {settings.DEBUG}")
+    print(f"[CONFIG] Database: {settings.DATABASE_URL.split('://')[0]}://***")
+    print(f"[CONFIG] OpenAI API Key loaded: {'Yes' if settings.OPENAI_API_KEY else 'No'}")
+
+
+# Helper functions for backwards compatibility
 def get_cors_origins_list():
-    return [origin.strip() for origin in CORS_ORIGINS.split(",")]
+    """Get list of CORS origins"""
+    return settings.cors_origins_list
+
 
 def get_allowed_extensions_list():
-    return [ext.strip() for ext in ALLOWED_EXTENSIONS.split(",")]
-
-# Creer un objet settings compatible
-class Settings:
-    def __init__(self):
-        self.OPENAI_API_KEY = OPENAI_API_KEY
-        self.SECRET_KEY = SECRET_KEY
-        self.DATABASE_URL = DATABASE_URL
-        self.REDIS_URL = REDIS_URL
-        self.HOST = HOST
-        self.PORT = PORT
-        self.DEBUG = DEBUG
-        self.UPLOAD_DIR = UPLOAD_DIR
-        self.MAX_FILE_SIZE = MAX_FILE_SIZE
-        self.ALLOWED_EXTENSIONS = ALLOWED_EXTENSIONS
-        self.CORS_ORIGINS = CORS_ORIGINS
-        self.APP_NAME = APP_NAME
-        self.APP_VERSION = APP_VERSION
-        self.cors_origins_list = get_cors_origins_list()
-        self.allowed_extensions_list = get_allowed_extensions_list()
-
-settings = Settings()
+    """Get list of allowed file extensions"""
+    return settings.allowed_extensions_list
