@@ -15,8 +15,10 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.middleware import setup_security_middleware
 from app.core.rate_limit import setup_rate_limiter
+from app.core.redis import CacheManager
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth
+from app.services.storage import StorageManager
 
 # Setup logging
 logger = setup_logging()
@@ -38,6 +40,20 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
 
+    # Initialize cache (Redis or in-memory)
+    try:
+        CacheManager.initialize(settings.REDIS_URL)
+        logger.info(f"Cache initialized: {'Redis' if not settings.REDIS_URL.startswith('memory') else 'In-memory'}")
+    except Exception as e:
+        logger.error(f"Cache initialization failed: {e}")
+
+    # Initialize storage
+    try:
+        StorageManager.initialize("local", base_path=settings.UPLOAD_DIR)
+        logger.info("Storage initialized successfully")
+    except Exception as e:
+        logger.error(f"Storage initialization failed: {e}")
+
     # Create necessary directories
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.UPLOAD_DIR, "photos").mkdir(parents=True, exist_ok=True)
@@ -52,6 +68,14 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Shutting down application")
+
+    # Close cache connection
+    try:
+        await CacheManager.close()
+        logger.info("Cache connection closed")
+    except Exception as e:
+        logger.error(f"Error closing cache: {e}")
+
     close_db()
 
 
@@ -145,8 +169,29 @@ async def readiness_check():
     Readiness check endpoint.
     Verifies all dependencies are available.
     """
+    from app.core.redis import CacheManager
+
+    # Check database
+    db_ready = True
+    try:
+        from sqlalchemy import text
+        from app.db.session import engine
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    except Exception:
+        db_ready = False
+
+    # Check cache (Redis or memory)
+    cache_ready = False
+    try:
+        cache = CacheManager.get_cache()
+        cache_ready = await cache.ping()
+    except Exception:
+        cache_ready = False
+
     checks = {
-        "database": True,  # TODO: Add actual DB check
+        "database": db_ready,
+        "cache": cache_ready,
         "uploads_dir": Path(settings.UPLOAD_DIR).exists()
     }
 

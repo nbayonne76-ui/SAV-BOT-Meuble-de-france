@@ -1,0 +1,18 @@
+Generic single-database configuration for SAV-BOT Meuble de France.
+
+Usage:
+    # Create a new migration
+    cd backend
+    alembic revision --autogenerate -m "Description of changes"
+
+    # Apply migrations
+    alembic upgrade head
+
+    # Downgrade one version
+    alembic downgrade -1
+
+    # View current version
+    alembic current
+
+    # View history
+    alembic history
