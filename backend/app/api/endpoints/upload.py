@@ -1,0 +1,124 @@
+# backend/app/api/endpoints/upload.py
+from fastapi import APIRouter, File, UploadFile, HTTPException, status
+from typing import List
+import logging
+import aiofiles
+import os
+from pathlib import Path
+from datetime import datetime
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+
+# Create upload directories
+UPLOAD_DIR = Path(settings.UPLOAD_DIR)
+PHOTOS_DIR = UPLOAD_DIR / "photos"
+VIDEOS_DIR = UPLOAD_DIR / "videos"
+
+for directory in [UPLOAD_DIR, PHOTOS_DIR, VIDEOS_DIR]:
+    directory.mkdir(parents=True, exist_ok=True)
+
+def is_allowed_file(filename: str) -> bool:
+    """Check if file extension is allowed"""
+    extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    return extension in settings.allowed_extensions_list
+
+def get_file_directory(filename: str) -> Path:
+    """Get the appropriate directory for the file"""
+    extension = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+    if extension in ['mp4', 'mov', 'avi']:
+        return VIDEOS_DIR
+    return PHOTOS_DIR
+
+@router.post("/", status_code=status.HTTP_200_OK)
+async def upload_files(files: List[UploadFile] = File(...)):
+    """
+    Upload photos or videos
+    """
+    try:
+        logger.info(f"Upload request received: {len(files)} file(s)")
+
+        if not files:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Aucun fichier fourni"
+            )
+
+        uploaded_files = []
+
+        for file in files:
+            # Validate file
+            if not is_allowed_file(file.filename):
+                logger.warning(f"Invalid file type: {file.filename}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Type de fichier non autorisé: {file.filename}"
+                )
+
+            # Check file size
+            content = await file.read()
+            if len(content) > settings.MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Fichier trop volumineux: {file.filename} (max {settings.MAX_FILE_SIZE / 1024 / 1024}MB)"
+                )
+
+            # Generate unique filename
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
+            new_filename = f"{timestamp}_{file.filename}"
+
+            # Save file
+            file_dir = get_file_directory(file.filename)
+            file_path = file_dir / new_filename
+
+            async with aiofiles.open(file_path, 'wb') as f:
+                await f.write(content)
+
+            logger.info(f"File saved: {file_path}")
+
+            uploaded_files.append({
+                "original_name": file.filename,
+                "saved_name": new_filename,
+                "url": f"/uploads/{file_dir.name}/{new_filename}",
+                "size": len(content),
+                "type": extension
+            })
+
+        return {
+            "success": True,
+            "files": uploaded_files,
+            "count": len(uploaded_files)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Upload error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de l'upload: {str(e)}"
+        )
+
+@router.get("/stats", status_code=status.HTTP_200_OK)
+async def get_upload_stats():
+    """Get upload statistics"""
+    try:
+        photos_count = len(list(PHOTOS_DIR.glob("*")))
+        videos_count = len(list(VIDEOS_DIR.glob("*")))
+
+        return {
+            "success": True,
+            "stats": {
+                "photos": photos_count,
+                "videos": videos_count,
+                "total": photos_count + videos_count
+            }
+        }
+    except Exception as e:
+        logger.error(f"Stats error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur: {str(e)}"
+        )

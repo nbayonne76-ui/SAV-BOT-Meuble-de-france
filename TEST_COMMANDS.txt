@@ -1,0 +1,141 @@
+# ================================================
+# COMMANDES DE TEST - SYSTÈME SAV
+# ================================================
+# Copiez-collez ces commandes dans un terminal pour tester
+
+# ================================================
+# TEST 1 : PROBLÈME CRITIQUE (Escalade humaine)
+# ================================================
+# Scénario: Pied cassé, danger enfant
+# Résultat attendu: P0, Escalade humaine, Délai 4h
+
+curl -X POST http://localhost:8000/api/sav/create-claim -H "Content-Type: application/json" -d "{\"customer_id\":\"urgent@example.fr\",\"order_number\":\"CMD-2024-URGENT\",\"product_sku\":\"OSLO-3P\",\"product_name\":\"Canapé OSLO 3 places\",\"problem_description\":\"Mon canapé a un pied cassé net, il va tomber sur mon enfant, c'est vraiment dangereux!!!\",\"purchase_date\":\"2024-06-01T00:00:00Z\",\"delivery_date\":\"2024-07-15T00:00:00Z\",\"customer_tier\":\"standard\",\"product_value\":1890.0}"
+
+
+# ================================================
+# TEST 2 : PROBLÈME MODÉRÉ SOUS GARANTIE
+# ================================================
+# Scénario: Coussins affaissés après 8 mois
+# Résultat attendu: P1/P2, Technicien, Garantie OK
+
+curl -X POST http://localhost:8000/api/sav/create-claim -H "Content-Type: application/json" -d "{\"customer_id\":\"client@example.fr\",\"order_number\":\"CMD-2024-MODERATE\",\"product_sku\":\"OSLO-3P\",\"product_name\":\"Canapé OSLO 3 places\",\"problem_description\":\"Les coussins de mon canapé s'affaissent un peu après 8 mois, c'est un peu décevant pour le prix\",\"purchase_date\":\"2024-04-01T00:00:00Z\",\"delivery_date\":\"2024-05-15T00:00:00Z\",\"customer_tier\":\"standard\",\"product_value\":1890.0}"
+
+
+# ================================================
+# TEST 3 : CLIENT EN COLÈRE
+# ================================================
+# Scénario: Client frustré, ton agressif
+# Résultat attendu: Ton ANGRY détecté, Délai 24h
+
+curl -X POST http://localhost:8000/api/sav/create-claim -H "Content-Type: application/json" -d "{\"customer_id\":\"angry@example.fr\",\"order_number\":\"CMD-2024-ANGRY\",\"product_sku\":\"OSLO-3P\",\"product_name\":\"Canapé OSLO 3 places\",\"problem_description\":\"C'est inadmissible!!! Mon canapé est déjà cassé après 3 mois, je suis furieux, je veux un remboursement IMMÉDIAT!!!\",\"purchase_date\":\"2024-09-01T00:00:00Z\",\"delivery_date\":\"2024-10-01T00:00:00Z\",\"customer_tier\":\"standard\",\"product_value\":1890.0}"
+
+
+# ================================================
+# TEST 4 : PROBLÈME HORS GARANTIE
+# ================================================
+# Scénario: Tissu déchiré après 4 ans
+# Résultat attendu: Garantie expirée, Solutions alternatives
+
+curl -X POST http://localhost:8000/api/sav/create-claim -H "Content-Type: application/json" -d "{\"customer_id\":\"ancien@example.fr\",\"order_number\":\"CMD-2021-OLD\",\"product_sku\":\"OSLO-3P\",\"product_name\":\"Canapé OSLO 3 places\",\"problem_description\":\"Le tissu de mon canapé est déchiré sur l'accoudoir\",\"purchase_date\":\"2021-01-01T00:00:00Z\",\"delivery_date\":\"2021-02-15T00:00:00Z\",\"customer_tier\":\"standard\",\"product_value\":1890.0}"
+
+
+# ================================================
+# TEST 5 : ODEUR (Auto-résolution)
+# ================================================
+# Scénario: Odeur produit neuf
+# Résultat attendu: P3, Auto-résolution avec conseils
+
+curl -X POST http://localhost:8000/api/sav/create-claim -H "Content-Type: application/json" -d "{\"customer_id\":\"smell@example.fr\",\"order_number\":\"CMD-2024-SMELL\",\"product_sku\":\"OSLO-3P\",\"product_name\":\"Canapé OSLO 3 places\",\"problem_description\":\"Mon nouveau canapé livré hier sent le chimique\",\"purchase_date\":\"2024-11-25T00:00:00Z\",\"delivery_date\":\"2024-12-03T00:00:00Z\",\"customer_tier\":\"standard\",\"product_value\":1890.0}"
+
+
+# ================================================
+# TEST 6 : MÉCANISME BLOQUÉ
+# ================================================
+# Scénario: Mécanisme relax bloqué
+# Résultat attendu: P1, Technicien, Garantie OK (3 ans)
+
+curl -X POST http://localhost:8000/api/sav/create-claim -H "Content-Type: application/json" -d "{\"customer_id\":\"mechanism@example.fr\",\"order_number\":\"CMD-2024-MECH\",\"product_sku\":\"RELAX-OSLO\",\"product_name\":\"Canapé OSLO Relax\",\"problem_description\":\"Le mécanisme relax de mon canapé est bloqué, il ne fonctionne plus du tout\",\"purchase_date\":\"2023-06-01T00:00:00Z\",\"delivery_date\":\"2023-07-15T00:00:00Z\",\"customer_tier\":\"standard\",\"product_value\":2490.0}"
+
+
+# ================================================
+# REQUÊTES D'INFORMATION
+# ================================================
+
+# Récupérer un ticket
+curl http://localhost:8000/api/sav/ticket/SAV-20251204-001
+
+# Récupérer l'historique d'un ticket
+curl http://localhost:8000/api/sav/ticket/SAV-20251204-001/history
+
+# Récupérer les exigences de preuves pour problème structurel
+curl http://localhost:8000/api/sav/evidence-requirements/structural?priority=P0
+
+# Récupérer les exigences de preuves pour coussins
+curl http://localhost:8000/api/sav/evidence-requirements/cushions?priority=P2
+
+# Récupérer les exigences de preuves pour tissu
+curl http://localhost:8000/api/sav/evidence-requirements/fabric?priority=P2
+
+
+# ================================================
+# AJOUTER UNE PREUVE (PHOTO)
+# ================================================
+
+curl -X POST http://localhost:8000/api/sav/add-evidence -H "Content-Type: application/json" -d "{\"ticket_id\":\"SAV-20251204-001\",\"evidence_type\":\"photo\",\"evidence_url\":\"https://example.com/photo1.jpg\",\"file_size_bytes\":2048000,\"description\":\"Vue d'ensemble du problème\",\"metadata\":{\"width\":1920,\"height\":1080}}"
+
+
+# ================================================
+# RÉSULTATS ATTENDUS PAR TEST
+# ================================================
+
+# TEST 1 (URGENT):
+# - Ton: URGENT
+# - Urgence: CRITICAL
+# - Priorité: P0
+# - Status: escalated_to_human
+# - SLA: 4h
+# - Validation requise: Oui
+
+# TEST 2 (MODERATE):
+# - Ton: CONCERNED ou FRUSTRATED
+# - Urgence: MEDIUM
+# - Priorité: P1 ou P2
+# - Status: awaiting_technician
+# - SLA: 24h-48h
+# - Garantie: Couvert
+
+# TEST 3 (ANGRY):
+# - Ton: ANGRY
+# - Urgence: HIGH
+# - Priorité: P1
+# - Status: escalated_to_human ou awaiting_technician
+# - SLA: 24h
+# - Empathie requise: Oui
+
+# TEST 4 (HORS GARANTIE):
+# - Garantie: Non couvert (4 ans > 2 ans tissu)
+# - Status: escalated_to_human
+# - Proposition: Solutions alternatives
+
+# TEST 5 (AUTO-RÉSOLUTION):
+# - Catégorie: smell
+# - Priorité: P3
+# - Status: auto_resolved
+# - Solution: Conseils aération
+
+# TEST 6 (MÉCANISME):
+# - Catégorie: mechanism
+# - Garantie: Couvert (1.5 ans < 3 ans)
+# - Priorité: P1
+# - Status: awaiting_technician
+
+
+# ================================================
+# VÉRIFICATION SANTÉ API
+# ================================================
+
+# Vérifier que l'API fonctionne
+curl http://localhost:8000/health
+
+# Vérifier la documentation Swagger
+# Ouvrir dans le navigateur: http://localhost:8000/docs

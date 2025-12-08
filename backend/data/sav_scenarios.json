@@ -1,0 +1,557 @@
+{
+  "scenarios": [
+    {
+      "id": "SAV-001",
+      "title": "Canapé d'angle - Affaissement coussins",
+      "category": "salon",
+      "product_id": "SAL-CAP-001",
+      "product_name": "Canapé d'angle Confort Plus",
+      "problem_type": "affaissement_mousse",
+      "priority": "P2",
+      "keywords": ["affaissement", "coussin", "s'affaisse", "creux", "confort", "mousse"],
+      "warranty_coverage": true,
+      "warranty_type": "2 ans structure, 1 an tissus",
+      "diagnostic_questions": [
+        "Quelle partie s'affaisse exactement ? (Assise, dossier)",
+        "S'agit-il de tous les coussins ou seulement certains ?",
+        "Avez-vous retourné et redonné du gonflant aux coussins récemment ?",
+        "Le canapé est-il en tissu, cuir ou microfibre ?"
+      ],
+      "first_response": "Bonjour ! Je comprends votre inquiétude, un affaissement n'est pas normal pour notre gamme. Pour mieux vous aider, pouvez-vous me préciser : quelle partie s'affaisse exactement, s'agit-il de tous les coussins, avez-vous retourné les coussins récemment, et quel est le revêtement ?",
+      "quick_fix": {
+        "possible": true,
+        "steps": [
+          "Retirez la housse du coussin concerné (elle est déhoussable)",
+          "Tapotez vigoureusement la mousse pour lui redonner du gonflant",
+          "Retournez le coussin (face avant/arrière)",
+          "Faites cela tous les 15 jours pour maintenir le confort"
+        ]
+      },
+      "solution": {
+        "description": "Remplacement du coussin d'assise défectueux sous garantie",
+        "timeline": "3-5 jours ouvrés",
+        "cost": "Gratuit (sous garantie)",
+        "required_photos": true,
+        "photo_instructions": [
+          "Vue d'ensemble du canapé",
+          "Zoom sur la partie affaissée",
+          "Vue de côté montrant l'affaissement"
+        ]
+      },
+      "actions": [
+        "Créer dossier SAV",
+        "Demander photos",
+        "Valider garantie",
+        "Commander nouveau coussin",
+        "Organiser livraison",
+        "Email confirmation"
+      ]
+    },
+    {
+      "id": "SAV-002",
+      "title": "Canapé Relax - Mécanisme électrique en panne",
+      "category": "salon",
+      "product_id": "SAL-CAP-002",
+      "product_name": "Canapé 3 places Relax",
+      "problem_type": "panne_electrique",
+      "priority": "P1",
+      "keywords": ["relax", "électrique", "mécanisme", "moteur", "panne", "ne marche pas", "télécommande"],
+      "warranty_coverage": true,
+      "warranty_type": "5 ans mécanisme",
+      "diagnostic_questions": [
+        "Les deux places sont-elles concernées ou seulement une ?",
+        "Entendez-vous un bruit quand vous appuyez sur la télécommande ?",
+        "Le voyant LED de la télécommande s'allume-t-il ?",
+        "Avez-vous vérifié que le câble d'alimentation est bien branché ?"
+      ],
+      "first_response": "Bonjour ! Je comprends que c'est très frustrant quand le mécanisme relax ne fonctionne plus. Ne vous inquiétez pas, on va résoudre ça rapidement. Pour diagnostiquer le problème : les deux places sont-elles concernées, entendez-vous un bruit, le LED fonctionne-t-il, et le câble est-il bien branché ?",
+      "quick_fix": {
+        "possible": true,
+        "steps": [
+          "Débrancher le canapé pendant 2 minutes (reset électronique)",
+          "Vérifier qu'aucun objet ne bloque le mécanisme sous le canapé",
+          "Rebrancher et retester"
+        ]
+      },
+      "solution": {
+        "description": "Intervention technicien pour diagnostic et remplacement moteur",
+        "timeline": "24-48 heures",
+        "cost": "Gratuit (sous garantie 5 ans)",
+        "technician_required": true,
+        "intervention_type": "Domicile"
+      },
+      "actions": [
+        "Créer dossier SAV urgent",
+        "Appel technicien < 24h",
+        "Planifier intervention domicile",
+        "Préparer pièces de rechange",
+        "Confirmation SMS + Email"
+      ]
+    },
+    {
+      "id": "SAV-003",
+      "title": "Fauteuil - Velours usagé prématurément",
+      "category": "salon",
+      "product_id": "SAL-FAU-001",
+      "product_name": "Fauteuil Pétale",
+      "problem_type": "usure_tissu",
+      "priority": "P2",
+      "keywords": ["velours", "brillant", "usé", "tissu", "abîmé", "reflet", "accoudoir"],
+      "warranty_coverage": true,
+      "warranty_type": "1 an tissus",
+      "diagnostic_questions": [
+        "De quelle couleur est votre fauteuil ? (Rose, Bleu canard, Gris, Vert)",
+        "Le brillant est-il sur les deux accoudoirs ?",
+        "Y a-t-il d'autres zones affectées ?",
+        "Le fauteuil est-il exposé à la lumière directe du soleil ?",
+        "Avez-vous utilisé des produits de nettoyage dessus ?"
+      ],
+      "first_response": "Bonjour, je comprends votre déception. Le brillant sur le velours n'est pas normal pour notre gamme Pétale. Pour mieux comprendre : quelle est la couleur, quelles zones sont affectées, y a-t-il exposition au soleil, et avez-vous utilisé des produits de nettoyage ?",
+      "quick_fix": {
+        "possible": false
+      },
+      "solution": {
+        "description": "Échange, avoir commercial ou remboursement",
+        "timeline": "4-6 semaines (échange)",
+        "options": [
+          {
+            "type": "Échange complet",
+            "description": "Nouveau fauteuil identique",
+            "cost": "Gratuit",
+            "timeline": "4-6 semaines"
+          },
+          {
+            "type": "Avoir commercial",
+            "description": "30% de crédit sur compte client",
+            "cost": "Gratuit",
+            "timeline": "Immédiat"
+          },
+          {
+            "type": "Remboursement",
+            "description": "Remboursement intégral",
+            "cost": "Gratuit",
+            "timeline": "7-10 jours"
+          }
+        ],
+        "required_photos": true,
+        "photo_instructions": [
+          "Vue d'ensemble du fauteuil",
+          "Zoom sur accoudoir droit",
+          "Zoom sur accoudoir gauche",
+          "Autres zones affectées"
+        ]
+      },
+      "actions": [
+        "Créer dossier SAV",
+        "Demander photos",
+        "Analyser usure",
+        "Proposer options",
+        "Traiter selon choix client"
+      ]
+    },
+    {
+      "id": "SAV-004",
+      "title": "Table extensible - Mécanisme papillon bloqué",
+      "category": "salle_a_manger",
+      "product_id": "SAM-TAB-001",
+      "product_name": "Table extensible Moderne",
+      "problem_type": "mecanisme_bloque",
+      "priority": "P1",
+      "keywords": ["table", "extension", "bloqué", "papillon", "mécanisme", "n'ouvre pas", "coincé"],
+      "warranty_coverage": true,
+      "warranty_type": "3 ans structure et mécanisme",
+      "diagnostic_questions": [
+        "La table est-elle en position fermée actuellement ?",
+        "Le blocage se situe-t-il au moment de soulever la partie centrale ?",
+        "Avez-vous entendu un craquement ou bruit inhabituel ?",
+        "De quelle matière est le plateau ? (Céramique, Bois, Verre)",
+        "Quand avez-vous utilisé le mécanisme pour la dernière fois ?"
+      ],
+      "first_response": "Bonjour ! Je vais vous aider à débloquer votre table extensible. Pour comprendre le blocage : la table est-elle fermée, le blocage est-il lors du soulèvement, avez-vous entendu un bruit, quel est le matériau du plateau, et quand l'avez-vous utilisée la dernière fois ?",
+      "quick_fix": {
+        "possible": true,
+        "steps": [
+          "Inspection sous la table pour vérifier absence d'objet coincé",
+          "Vérifier vis desserrées",
+          "Lubrification des rails avec WD-40 ou similaire",
+          "Attendre 5 minutes",
+          "Test en douceur avec petits mouvements",
+          "NE PAS FORCER"
+        ]
+      },
+      "solution": {
+        "description": "Intervention technicien pour diagnostic et réparation mécanisme",
+        "timeline": "48-72 heures",
+        "cost": "Gratuit si défaut fabrication (sous garantie 3 ans), sinon devis 150-200€",
+        "technician_required": true,
+        "intervention_type": "Domicile"
+      },
+      "actions": [
+        "Tenter déblocage à distance",
+        "Créer dossier SAV",
+        "Planifier intervention technicien",
+        "Diagnostic sur place",
+        "Réparation ou remplacement rails"
+      ]
+    },
+    {
+      "id": "SAV-005",
+      "title": "Lit coffre - Vérin à gaz défaillant",
+      "category": "chambre",
+      "product_id": "CHA-LIT-001",
+      "product_name": "Lit coffre Premium",
+      "problem_type": "securite_verin",
+      "priority": "P0",
+      "keywords": ["lit", "coffre", "vérin", "retombe", "dangereux", "ne tient pas", "gaz"],
+      "warranty_coverage": true,
+      "warranty_type": "5 ans structure + 2 ans mécanisme",
+      "diagnostic_questions": [
+        "Les deux vérins sont-ils affectés ou un seul ?",
+        "Le sommier retombe-t-il brutalement ou lentement ?",
+        "Quelle est la taille de votre lit ? (140, 160 ou 180cm)",
+        "Y a-t-il un matelas dessus ? (poids approximatif)",
+        "Avez-vous remarqué une fuite d'huile sur les vérins ?"
+      ],
+      "first_response": "Bonjour ! C'est un problème de sécurité qui nécessite une intervention rapide. Ne vous inquiétez pas, on va régler ça. Questions importantes : combien de vérins sont affectés, le sommier retombe-t-il vite, quelle est la taille du lit, y a-t-il un matelas, et voyez-vous de l'huile ? ⚠️ EN ATTENDANT : Ne soulevez plus le sommier pour votre sécurité.",
+      "safety_warning": "⚠️ DANGER : Risque de blessure. Ne pas soulever le sommier jusqu'à réparation.",
+      "quick_fix": {
+        "possible": false
+      },
+      "solution": {
+        "description": "Remplacement des 2 vérins à gaz (toujours la paire pour équilibrage)",
+        "timeline": "24-48 heures maximum",
+        "cost": "Gratuit (sous garantie 2 ans mécanisme)",
+        "technician_required": true,
+        "intervention_type": "Domicile",
+        "intervention_duration": "30-45 minutes"
+      },
+      "actions": [
+        "Créer dossier SAV CRITIQUE",
+        "Appel équipe technique < 4h",
+        "Planifier intervention urgente < 24h",
+        "Préparer vérins neufs",
+        "Remplacement sur place",
+        "Email + SMS numéro urgence"
+      ]
+    },
+    {
+      "id": "SAV-006",
+      "title": "Matelas - Affaissement prématuré",
+      "category": "chambre",
+      "product_id": "CHA-MAT-001",
+      "product_name": "Matelas Confort Optimal",
+      "problem_type": "affaissement_matelas",
+      "priority": "P2",
+      "keywords": ["matelas", "affaissement", "creux", "mal au dos", "inconfortable"],
+      "warranty_coverage": true,
+      "warranty_type": "10 ans (affaissement >2,5cm)",
+      "diagnostic_questions": [
+        "Quelle est la taille du matelas ? (140, 160 ou 180cm)",
+        "Est-ce en mousse mémoire de forme, ressorts ou latex ?",
+        "Depuis combien de temps avez-vous remarqué l'affaissement ?",
+        "Retournez-vous régulièrement le matelas ?",
+        "Utilisez-vous un protège-matelas ?"
+      ],
+      "first_response": "Bonjour ! Les problèmes de dos liés à un matelas affaissé sont vraiment pénibles. Je vais vérifier si c'est couvert par votre garantie 10 ans. Questions : quelle taille, quel type de matelas, depuis quand l'affaissement, retournez-vous le matelas, et avez-vous un protège-matelas ?",
+      "measurement_instructions": {
+        "required": true,
+        "threshold": "2.5cm",
+        "steps": [
+          "Placer une règle droite sur toute la longueur du matelas",
+          "Mesurer la profondeur du creux au centre",
+          "Prendre une photo de la règle posée sur le matelas avec vue du creux",
+          "L'affaissement doit être >2,5cm pour garantie"
+        ]
+      },
+      "quick_fix": {
+        "possible": false
+      },
+      "solution": {
+        "description": "Échange matelas ou avoir commercial",
+        "timeline": "2-3 semaines",
+        "options": [
+          {
+            "type": "Échange standard",
+            "description": "Nouveau matelas identique",
+            "cost": "Gratuit (sous garantie)",
+            "timeline": "2-3 semaines"
+          },
+          {
+            "type": "Avoir commercial 50%",
+            "description": "Sur achat matelas gamme supérieure",
+            "cost": "Gratuit",
+            "timeline": "Immédiat"
+          }
+        ],
+        "required_photos": true,
+        "required_documents": [
+          "Photo étiquette matelas avec référence",
+          "Facture d'achat",
+          "Photos affaissement avec règle"
+        ]
+      },
+      "maintenance_tips": [
+        "Retourner tête/pieds + face tous les 3 mois pendant 1 an",
+        "Puis tous les 6 mois",
+        "Utiliser un protège-matelas",
+        "Vérifier espacement lattes sommier (max 8cm)"
+      ],
+      "actions": [
+        "Demander mesure affaissement",
+        "Demander photos + documents",
+        "Vérifier éligibilité garantie",
+        "Proposer options",
+        "Organiser échange",
+        "Email conseils entretien"
+      ]
+    },
+    {
+      "id": "SAV-007",
+      "title": "Livraison - Meuble endommagé",
+      "category": "general",
+      "product_id": "SAM-BUF-001",
+      "product_name": "Buffet Contemporain",
+      "problem_type": "livraison_endommagee",
+      "priority": "P1",
+      "keywords": ["livraison", "endommagé", "rayé", "cassé", "abîmé", "livreurs"],
+      "warranty_coverage": true,
+      "warranty_type": "Livraison sous assurance",
+      "urgent_action": {
+        "title": "🚨 PROCÉDURE LIVRAISON ENDOMMAGÉE",
+        "steps": [
+          "NE PAS SIGNER le bon de livraison tel quel",
+          "PRENDRE immédiatement 5-6 photos (carton, chaque dommage, vue ensemble)",
+          "FAIRE SIGNER aux livreurs un constat de dommages",
+          "SIGNER avec RÉSERVES écrites sur le bon",
+          "Décider : Refuser livraison OU Accepter avec réserves"
+        ]
+      },
+      "first_response": "Bonjour ! Ne signez RIEN pour le moment ! Je vais vous dire exactement quoi faire. 🚨 PROCÉDURE : 1) NE PAS SIGNER tel quel, 2) PRENDRE photos immédiatement, 3) FAIRE CONSTATER par livreurs, 4) SIGNER avec RÉSERVES ou REFUSER. Les livreurs sont-ils toujours là ?",
+      "refusal_procedure": {
+        "description": "Refus total de la livraison",
+        "steps": [
+          "Dire aux livreurs : 'Je refuse cette livraison pour dommages constatés'",
+          "Ils signent un bon de refus",
+          "Ils repartent avec le meuble",
+          "Vous gardez une copie du document",
+          "Prendre photos avant départ"
+        ],
+        "consequence": "Nouvelle livraison 4-6 semaines",
+        "compensation": "Livraison étage offerte OU 100€ avoir"
+      },
+      "acceptance_with_reserves": {
+        "description": "Acceptation avec constat de dommages",
+        "text_to_write": "Livraison acceptée sous réserves : [Liste des dommages constatés] - Photos prises + constat fait",
+        "consequence": "SAV pour remplacement pièces endommagées"
+      },
+      "solution": {
+        "description": "Nouvelle livraison ou réparation selon choix client",
+        "timeline": "4-6 semaines (nouvelle livraison) ou 1-2 semaines (pièces)",
+        "cost": "Gratuit + geste commercial"
+      },
+      "actions": [
+        "Guider client procédure immédiate",
+        "Créer dossier SAV urgent",
+        "Organiser nouvelle livraison OU remplacement pièces",
+        "Appliquer geste commercial",
+        "Email confirmation"
+      ]
+    },
+    {
+      "id": "INFO-001",
+      "title": "Entretien - Canapé cuir",
+      "category": "information",
+      "product_id": "SAL-CAP-002",
+      "product_name": "Canapé cuir",
+      "problem_type": "information_entretien",
+      "priority": "P3",
+      "keywords": ["entretien", "cuir", "nettoyage", "lait", "produit", "comment"],
+      "warranty_coverage": false,
+      "maintenance_guide": {
+        "daily": [
+          "Dépoussiérage chiffon doux microfibre",
+          "Essuyage taches immédiat (eau + savon doux)",
+          "Éviter objets tranchants"
+        ],
+        "monthly": [
+          "Nettoyage chiffon légèrement humide",
+          "Séchage chiffon sec",
+          "Vérifier absence de rayures"
+        ],
+        "quarterly": [
+          "Application lait nourrissant cuir",
+          "Massage circulaire doux",
+          "Laisser pénétrer 1h",
+          "Buffage chiffon doux",
+          "Maintient souplesse et brillance"
+        ],
+        "never_do": [
+          "❌ Produits alcoolisés ou solvants",
+          "❌ Eau de Javel",
+          "❌ Exposition soleil direct prolongée",
+          "❌ Source chaleur directe (radiateur <50cm)",
+          "❌ Nettoyeur vapeur"
+        ],
+        "protection": [
+          "Plaid sur zones très utilisées",
+          "Éloigner >50cm radiateur/cheminée",
+          "Fenêtre : Rideaux/voilages pour éviter UV"
+        ]
+      },
+      "scratch_repair": {
+        "superficial": {
+          "steps": [
+            "Test préalable zone cachée",
+            "Chiffon + lait nourrissant",
+            "Massage circulaire sur rayure",
+            "Laisser sécher 30min",
+            "La rayure devrait s'estomper"
+          ],
+          "result": "80-90% réduction rayures fines"
+        },
+        "medium": {
+          "steps": [
+            "Crème réparatrice cuir",
+            "Application fine sur rayure",
+            "Laisser pénétrer 1h",
+            "Buffage doux"
+          ],
+          "result": "50-70% réduction rayures moyennes"
+        },
+        "deep": {
+          "action": "Contacter SAV pour intervention technicien spécialisé",
+          "warranty": "Sous garantie 2 ans si défaut matière"
+        }
+      },
+      "product_recommendation": {
+        "name": "Kit entretien cuir",
+        "content": [
+          "Lait nourrissant",
+          "Crème réparatrice",
+          "Chiffons microfibre"
+        ],
+        "price": "45€",
+        "duration": "1 an"
+      },
+      "first_response": "Bonjour ! Excellente initiative de vous renseigner sur l'entretien dès le début ! Cela va prolonger considérablement la durée de vie de votre magnifique canapé. Je vais vous donner le guide complet d'entretien du cuir.",
+      "actions": [
+        "Fournir guide entretien complet",
+        "Proposer kit entretien",
+        "Email récapitulatif conseils"
+      ]
+    },
+    {
+      "id": "RETURN-001",
+      "title": "Retour/Échange - Changement d'avis",
+      "category": "general",
+      "product_id": "SAL-FAU-001",
+      "product_name": "Fauteuil Pétale",
+      "problem_type": "retractation",
+      "priority": "P3",
+      "keywords": ["retour", "échange", "rétractation", "changer", "ne convient pas", "remboursement"],
+      "warranty_coverage": false,
+      "legal_period": "14 jours",
+      "eligibility_conditions": [
+        "Produit intact (pas de tache, rayure, dommage)",
+        "Emballage d'origine conservé si possible",
+        "Étiquettes présentes",
+        "Usage normal (test) accepté"
+      ],
+      "first_response": "Bonjour ! Je comprends, le choix en ligne est parfois difficile. Pour votre demande de retour, je dois vérifier : livraison il y a combien de jours (délai 14j), le produit est-il intact, emballage conservé, étiquettes présentes, et l'avez-vous utilisé ?",
+      "options": [
+        {
+          "type": "Retour avec enlèvement",
+          "description": "Enlèvement à domicile + remboursement",
+          "timeline": "5-7 jours enlèvement, 14 jours remboursement après réception",
+          "cost": "49€ frais enlèvement",
+          "refund_delay": "14 jours après réception"
+        },
+        {
+          "type": "Échange couleur/modèle",
+          "description": "Échange gratuit 1 fois",
+          "timeline": "4-6 semaines livraison nouveau",
+          "cost": "Gratuit",
+          "note": "Option recommandée"
+        },
+        {
+          "type": "Avoir commercial",
+          "description": "Crédit 100% valeur produit",
+          "timeline": "Immédiat",
+          "validity": "12 mois",
+          "usage": "Sur tout le site",
+          "cost": "Gratuit"
+        }
+      ],
+      "exchange_colors": [
+        {
+          "color": "Bleu canard",
+          "description": "Très tendance"
+        },
+        {
+          "color": "Gris perle",
+          "description": "Neutre, s'adapte partout"
+        },
+        {
+          "color": "Vert sauge",
+          "description": "Doux et apaisant"
+        }
+      ],
+      "solution": {
+        "description": "Retour, échange ou avoir selon choix client",
+        "timeline": "Variable selon option",
+        "cost": "Gratuit sauf enlèvement retour (49€)"
+      },
+      "actions": [
+        "Vérifier éligibilité (délai + état)",
+        "Présenter 3 options",
+        "Traiter selon choix",
+        "Email confirmation",
+        "Organiser logistique"
+      ]
+    }
+  ],
+  "priority_definitions": {
+    "P0": {
+      "label": "CRITIQUE",
+      "color": "red",
+      "description": "Danger sécurité, risque blessure",
+      "response_time": "4 heures",
+      "intervention_time": "24 heures maximum"
+    },
+    "P1": {
+      "label": "HAUTE",
+      "color": "orange",
+      "description": "Fonction principale défectueuse, produit inutilisable",
+      "response_time": "24 heures",
+      "intervention_time": "48-72 heures"
+    },
+    "P2": {
+      "label": "MOYENNE",
+      "color": "yellow",
+      "description": "Défaut qualité, inconfort, sous garantie",
+      "response_time": "3 jours",
+      "intervention_time": "5-7 jours"
+    },
+    "P3": {
+      "label": "BASSE",
+      "color": "green",
+      "description": "Information, retour standard, pas urgent",
+      "response_time": "5 jours",
+      "intervention_time": "Variable"
+    }
+  },
+  "chatbot_guidelines": [
+    "Toujours demander le numéro de commande si disponible",
+    "Poser questions précises pour diagnostic avant de proposer solution",
+    "Proposer solutions adaptées selon garantie et ancienneté produit",
+    "Créer ticket SAV systématiquement pour les problèmes techniques",
+    "Classer priorité correctement (P0 à P3)",
+    "Rassurer le client avec empathie",
+    "Donner timeline précise",
+    "Mentionner coûts clairement (gratuit ou payant)",
+    "Proposer alternatives quand possible",
+    "Confirmer par email récapitulatif",
+    "Pour photos : Demander vue ensemble + zooms sur zones problématiques",
+    "Sécurité : Alerter immédiatement sur dangers potentiels"
+  ]
+}

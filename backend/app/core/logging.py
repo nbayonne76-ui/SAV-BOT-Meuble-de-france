@@ -1,0 +1,28 @@
+# backend/app/core/logging.py
+import logging
+import sys
+from pathlib import Path
+
+def setup_logging():
+    """Configure application logging"""
+
+    # Create logs directory
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+
+    # Configure root logger
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_dir / "app.log"),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+
+    # Set specific log levels
+    logging.getLogger("uvicorn").setLevel(logging.INFO)
+    logging.getLogger("fastapi").setLevel(logging.INFO)
+    logging.getLogger("anthropic").setLevel(logging.WARNING)
+
+    return logging.getLogger(__name__)

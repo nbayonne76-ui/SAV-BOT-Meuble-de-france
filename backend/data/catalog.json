@@ -1,0 +1,461 @@
+{
+  "catalog_version": "1.0.0",
+  "last_updated": "2025-12-03",
+  "categories": {
+    "salon": {
+      "name": "Salon",
+      "products": [
+        {
+          "id": "SAL-CAP-001",
+          "name": "Canapé d'angle Confort Plus",
+          "category": "Canapés d'angle",
+          "price_range": "1200-2500",
+          "materials": ["Tissu", "Cuir", "Microfibre"],
+          "colors": ["Gris", "Beige", "Bleu", "Noir"],
+          "dimensions": {
+            "length": "280-320cm",
+            "depth": "160-200cm",
+            "height": "85-95cm"
+          },
+          "features": [
+            "Convertible en lit",
+            "Coffre de rangement",
+            "Têtières réglables",
+            "Coussins déhoussables"
+          ],
+          "warranty": "2 ans structure, 1 an tissus",
+          "delivery_time": "6-8 semaines",
+          "maintenance": {
+            "tissu": "Aspirateur doux, détachant textile, nettoyage à sec",
+            "cuir": "Chiffon humide, lait nourrissant cuir tous les 6 mois",
+            "structure": "Vérifier visserie tous les 6 mois"
+          },
+          "common_issues": [
+            "Affaissement coussins",
+            "Mécanisme convertible bloqué",
+            "Déchirure tissu",
+            "Taches",
+            "Décoloration"
+          ]
+        },
+        {
+          "id": "SAL-CAP-002",
+          "name": "Canapé 3 places Relax",
+          "category": "Canapés relaxation",
+          "price_range": "1800-3500",
+          "materials": ["Cuir", "Tissu premium"],
+          "colors": ["Marron", "Gris anthracite", "Beige"],
+          "dimensions": {
+            "length": "220-240cm",
+            "depth": "95-105cm",
+            "height": "100-110cm"
+          },
+          "features": [
+            "Mécanisme électrique",
+            "Repose-pieds intégré",
+            "Têtières motorisées",
+            "Port USB intégré"
+          ],
+          "warranty": "5 ans mécanisme, 2 ans structure",
+          "delivery_time": "8-10 semaines",
+          "maintenance": {
+            "mecanisme": "Vérifier câbles électriques, lubrifier mécanisme annuellement",
+            "cuir": "Nettoyage spécialisé tous les 3 mois",
+            "moteur": "Test fonctionnement mensuel"
+          },
+          "common_issues": [
+            "Mécanisme électrique en panne",
+            "Moteur bloqué",
+            "Bruit lors du déploiement",
+            "Télécommande défectueuse",
+            "Cuir craquelé"
+          ]
+        },
+        {
+          "id": "SAL-FAU-001",
+          "name": "Fauteuil Pétale",
+          "category": "Fauteuils",
+          "price_range": "600-1200",
+          "materials": ["Velours", "Tissu", "Cuir"],
+          "colors": ["Rose", "Bleu canard", "Gris perle", "Vert"],
+          "dimensions": {
+            "length": "75-85cm",
+            "depth": "80-90cm",
+            "height": "85-95cm"
+          },
+          "features": [
+            "Dossier ergonomique",
+            "Pieds en bois massif",
+            "Coussin d'assise moelleux"
+          ],
+          "warranty": "2 ans",
+          "delivery_time": "4-6 semaines",
+          "maintenance": {
+            "velours": "Aspirateur brosse douce, nettoyage vapeur si nécessaire",
+            "structure": "Serrer visserie pieds régulièrement",
+            "bois": "Huile pour bois 1x/an"
+          },
+          "common_issues": [
+            "Usure velours",
+            "Pieds instables",
+            "Affaissement assise",
+            "Taches",
+            "Bois rayé"
+          ]
+        },
+        {
+          "id": "SAL-TAB-001",
+          "name": "Table basse Chester",
+          "category": "Tables basses",
+          "price_range": "400-800",
+          "materials": ["Bois massif", "Verre trempé", "Métal"],
+          "colors": ["Chêne naturel", "Noyer", "Noir", "Blanc"],
+          "dimensions": {
+            "length": "110-140cm",
+            "depth": "60-80cm",
+            "height": "40-45cm"
+          },
+          "features": [
+            "Plateau relevable",
+            "Rangements intégrés",
+            "Pieds métalliques robustes"
+          ],
+          "warranty": "2 ans",
+          "delivery_time": "3-4 semaines",
+          "maintenance": {
+            "bois": "Nettoyage chiffon doux, cire 2x/an",
+            "verre": "Produit vitres, éviter chocs",
+            "metal": "Chiffon microfibre, éviter humidité"
+          },
+          "common_issues": [
+            "Rayures plateau",
+            "Mécanisme relevable bloqué",
+            "Verre fissuré",
+            "Pieds instables",
+            "Bois gonflé (humidité)"
+          ]
+        },
+        {
+          "id": "SAL-MEU-001",
+          "name": "Meuble TV Design",
+          "category": "Meubles TV",
+          "price_range": "500-1500",
+          "materials": ["Bois", "Laqué", "Verre"],
+          "colors": ["Blanc laqué", "Chêne", "Noir mat"],
+          "dimensions": {
+            "length": "160-220cm",
+            "depth": "40-50cm",
+            "height": "50-60cm"
+          },
+          "features": [
+            "Portes à ouverture push",
+            "Passe-câbles intégrés",
+            "Étagères réglables",
+            "LED intégrées (optionnel)"
+          ],
+          "warranty": "3 ans",
+          "delivery_time": "4-6 semaines",
+          "maintenance": {
+            "laque": "Chiffon microfibre légèrement humide, éviter produits abrasifs",
+            "bois": "Dépoussiérage régulier, cire spéciale",
+            "verre": "Nettoyant vitres sans ammoniaque"
+          },
+          "common_issues": [
+            "Mécanisme push défectueux",
+            "Laque écaillée",
+            "LED ne fonctionne plus",
+            "Étagère cassée",
+            "Rayures"
+          ]
+        }
+      ]
+    },
+    "salle_a_manger": {
+      "name": "Salle à manger",
+      "products": [
+        {
+          "id": "SAM-TAB-001",
+          "name": "Table extensible Moderne",
+          "category": "Tables à manger",
+          "price_range": "1000-2500",
+          "materials": ["Céramique", "Bois massif", "Verre trempé"],
+          "colors": ["Blanc", "Noir marbre", "Chêne", "Gris"],
+          "dimensions": {
+            "length": "160-240cm (extensible)",
+            "depth": "90-100cm",
+            "height": "75-78cm"
+          },
+          "features": [
+            "Extension papillon",
+            "Pieds en métal",
+            "Plateau céramique anti-rayures",
+            "Jusqu'à 10-12 personnes"
+          ],
+          "warranty": "3 ans structure, 2 ans plateau",
+          "delivery_time": "6-8 semaines",
+          "maintenance": {
+            "ceramique": "Nettoyage quotidien chiffon humide, détergent doux",
+            "mecanisme": "Lubrifier rails extension 2x/an",
+            "pieds": "Vérifier stabilité, ajuster patins"
+          },
+          "common_issues": [
+            "Mécanisme extension bloqué",
+            "Plateau céramique ébréché",
+            "Pieds instables",
+            "Rallonge ne se déploie pas",
+            "Table bancale"
+          ]
+        },
+        {
+          "id": "SAM-CHA-001",
+          "name": "Chaises Design Confort",
+          "category": "Chaises",
+          "price_range": "150-400",
+          "materials": ["Tissu", "Velours", "Similicuir"],
+          "colors": ["Gris", "Beige", "Bleu", "Vert", "Noir"],
+          "dimensions": {
+            "length": "45-50cm",
+            "depth": "50-55cm",
+            "height": "85-95cm"
+          },
+          "features": [
+            "Dossier ergonomique",
+            "Assise rembourrée",
+            "Pieds en bois ou métal",
+            "Empilables (certains modèles)"
+          ],
+          "warranty": "2 ans",
+          "delivery_time": "3-5 semaines",
+          "maintenance": {
+            "tissu": "Aspirateur, détachant textile",
+            "pieds": "Vérifier patins régulièrement",
+            "structure": "Resserrer vis tous les 6 mois"
+          },
+          "common_issues": [
+            "Tissu déchiré",
+            "Pieds instables",
+            "Assise affaissée",
+            "Taches",
+            "Craquements"
+          ]
+        },
+        {
+          "id": "SAM-BUF-001",
+          "name": "Buffet Contemporain",
+          "category": "Buffets",
+          "price_range": "800-2000",
+          "materials": ["Bois", "Laqué", "Métal"],
+          "colors": ["Chêne", "Blanc", "Noir", "Noyer"],
+          "dimensions": {
+            "length": "160-220cm",
+            "depth": "45-50cm",
+            "height": "80-90cm"
+          },
+          "features": [
+            "Portes à soft-close",
+            "Tiroirs intérieurs",
+            "Pieds réglables",
+            "Plateau résistant"
+          ],
+          "warranty": "3 ans",
+          "delivery_time": "6-8 semaines",
+          "maintenance": {
+            "laque": "Chiffon microfibre, produit spécialisé",
+            "bois": "Cire naturelle, éviter eau",
+            "mecanisme": "Vérifier soft-close, ajuster si besoin"
+          },
+          "common_issues": [
+            "Portes désalignées",
+            "Soft-close défectueux",
+            "Tiroir coincé",
+            "Rayures plateau",
+            "Pieds instables"
+          ]
+        }
+      ]
+    },
+    "chambre": {
+      "name": "Chambre",
+      "products": [
+        {
+          "id": "CHA-LIT-001",
+          "name": "Lit coffre Premium",
+          "category": "Lits",
+          "price_range": "800-2000",
+          "materials": ["Bois massif", "Tissu capitonné", "Simili cuir"],
+          "colors": ["Gris", "Beige", "Blanc", "Anthracite"],
+          "dimensions": {
+            "sizes": ["140x190cm", "160x200cm", "180x200cm"]
+          },
+          "features": [
+            "Coffre de rangement intégré",
+            "Vérin à gaz",
+            "Tête de lit capitonnée",
+            "Sommier à lattes inclus"
+          ],
+          "warranty": "5 ans structure, 2 ans mécanisme",
+          "delivery_time": "6-10 semaines",
+          "maintenance": {
+            "mecanisme": "Vérifier vérins 1x/an, lubrifier si bruit",
+            "tissu": "Aspirateur tête de lit, détachant si nécessaire",
+            "sommier": "Vérifier lattes, remplacer si cassées"
+          },
+          "common_issues": [
+            "Vérin à gaz défaillant",
+            "Mécanisme coffre bloqué",
+            "Latte cassée",
+            "Tissu déchiré tête de lit",
+            "Craquements structure"
+          ]
+        },
+        {
+          "id": "CHA-MAT-001",
+          "name": "Matelas Confort Optimal",
+          "category": "Matelas",
+          "price_range": "500-1500",
+          "materials": ["Mousse à mémoire de forme", "Ressorts ensachés", "Latex"],
+          "sizes": ["140x190cm", "160x200cm", "180x200cm"],
+          "features": [
+            "7 zones de confort",
+            "Face hiver/été",
+            "Hypoallergénique",
+            "Housse déhoussable"
+          ],
+          "warranty": "10 ans",
+          "delivery_time": "2-3 semaines",
+          "maintenance": {
+            "general": "Retourner tous les 3 mois, aérer régulièrement",
+            "housse": "Lavage machine 30°C",
+            "hygiene": "Aspirateur, protège-matelas recommandé"
+          },
+          "common_issues": [
+            "Affaissement prématuré",
+            "Ressorts qui craquent",
+            "Housse déchirée",
+            "Odeur persistante",
+            "Mousse déformée"
+          ]
+        },
+        {
+          "id": "CHA-DRE-001",
+          "name": "Dressing sur-mesure",
+          "category": "Dressings",
+          "price_range": "2000-8000",
+          "materials": ["Bois", "Mélaminé", "Verre"],
+          "colors": ["Blanc", "Chêne", "Noir", "Sur-mesure"],
+          "dimensions": {
+            "width": "Sur-mesure 150-400cm",
+            "depth": "55-65cm",
+            "height": "220-260cm"
+          },
+          "features": [
+            "Portes coulissantes",
+            "Éclairage LED intégré",
+            "Penderies modulables",
+            "Tiroirs soft-close",
+            "Miroirs intégrés"
+          ],
+          "warranty": "5 ans",
+          "delivery_time": "8-12 semaines (sur-mesure)",
+          "maintenance": {
+            "rails": "Nettoyage rails portes, lubrification",
+            "led": "Vérifier transformateur, remplacer bandes si besoin",
+            "portes": "Ajuster si désalignement"
+          },
+          "common_issues": [
+            "Portes coulissantes coincées",
+            "LED défectueuse",
+            "Tiroir ne ferme pas",
+            "Miroir rayé",
+            "Rail déformé"
+          ]
+        }
+      ]
+    },
+    "decoration": {
+      "name": "Décoration",
+      "products": [
+        {
+          "id": "DEC-MIR-001",
+          "name": "Miroir Design",
+          "category": "Miroirs",
+          "price_range": "150-600",
+          "materials": ["Verre", "Métal", "Bois"],
+          "colors": ["Doré", "Noir", "Argenté", "Naturel"],
+          "dimensions": {
+            "sizes": ["60x80cm", "80x100cm", "100x150cm", "Sur-mesure"]
+          },
+          "features": [
+            "LED intégré (optionnel)",
+            "Anti-buée (optionnel)",
+            "Cadre décoratif"
+          ],
+          "warranty": "2 ans",
+          "delivery_time": "2-4 semaines",
+          "maintenance": {
+            "verre": "Nettoyant vitres, chiffon microfibre",
+            "cadre": "Dépoussiérage, éviter humidité",
+            "led": "Test régulier"
+          },
+          "common_issues": [
+            "Miroir terni",
+            "LED ne fonctionne plus",
+            "Cadre abîmé",
+            "Fixation défectueuse",
+            "Verre cassé"
+          ]
+        },
+        {
+          "id": "DEC-TAP-001",
+          "name": "Tapis Designer",
+          "category": "Tapis",
+          "price_range": "200-1500",
+          "materials": ["Laine", "Coton", "Synthétique", "Viscose"],
+          "colors": ["Variés", "Sur-mesure"],
+          "dimensions": {
+            "sizes": ["160x230cm", "200x290cm", "250x350cm", "Sur-mesure"]
+          },
+          "features": [
+            "Fait main (certains)",
+            "Anti-dérapant",
+            "Facile d'entretien"
+          ],
+          "warranty": "1 an",
+          "delivery_time": "1-3 semaines",
+          "maintenance": {
+            "general": "Aspirateur régulier, nettoyage professionnel 1x/an",
+            "taches": "Détachant adapté immédiatement",
+            "rotation": "Tourner le tapis tous les 6 mois"
+          },
+          "common_issues": [
+            "Taches persistantes",
+            "Usure prématurée",
+            "Couleurs qui délavent",
+            "Odeur",
+            "Effilochage"
+          ]
+        }
+      ]
+    }
+  },
+  "warranty_info": {
+    "structure": "2-5 ans selon produit",
+    "tissus": "1-2 ans usure normale",
+    "mecanismes": "2-5 ans selon type",
+    "electronique": "2 ans",
+    "matelas": "10 ans affaissement >2.5cm",
+    "exclusions": [
+      "Usage anormal",
+      "Modification produit",
+      "Taches et accidents",
+      "Usure normale",
+      "Exposition soleil directe"
+    ]
+  },
+  "delivery_info": {
+    "standard": "4-8 semaines",
+    "sur_mesure": "8-12 semaines",
+    "livraison_etage": "Supplément applicable",
+    "montage": "Inclus ou optionnel selon produit"
+  }
+}

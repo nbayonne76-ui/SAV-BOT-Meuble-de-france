@@ -1,0 +1,181 @@
+{
+  "faq": {
+    "metadata": {
+      "last_updated": "2025-12-03",
+      "total_questions": 15,
+      "version": "1.0.0",
+      "note": "Cette FAQ sera enrichie progressivement avec les questions réelles des clients"
+    },
+    "categories": [
+      {
+        "id": "garanties",
+        "name": "Garanties et SAV",
+        "icon": "🛡️",
+        "questions": [
+          {
+            "id": "faq-garanties-001",
+            "question": "Quelle est la durée de garantie de mes meubles ?",
+            "answer": "Les garanties varient selon le type de produit :\n\n🛋️ **Canapés et fauteuils :**\n- Structure : 2 ans\n- Tissus/Revêtement : 1 an\n- Mécanismes électriques : 5 ans\n\n🍽️ **Tables et chaises :**\n- Structure : 3 ans\n- Mécanismes (extension, etc.) : 3 ans\n\n🛏️ **Lits :**\n- Structure : 5 ans\n- Mécanismes (vérins, etc.) : 2 ans\n\n🛏️ **Matelas :**\n- Garantie affaissement >2,5cm : 10 ans\n\nToutes nos garanties couvrent les défauts de fabrication et vices cachés.",
+            "keywords": ["garantie", "durée", "combien de temps", "SAV"],
+            "related_scenarios": ["SAV-001", "SAV-002", "SAV-005", "SAV-006"],
+            "popularity": 10,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-garanties-002",
+            "question": "Comment faire une réclamation SAV ?",
+            "answer": "Pour toute réclamation SAV, suivez ces étapes :\n\n1. **Contactez-nous :**\n   - Via ce chatbot (le plus rapide !)\n   - Email : sav@meuble-de-france.fr\n   - Téléphone : 01 23 45 67 89\n\n2. **Préparez :**\n   - Numéro de commande\n   - Photos du problème\n   - Description détaillée\n\n3. **Nous créons votre dossier SAV**\n\n4. **Traitement selon priorité :**\n   - 🔴 Urgent (sécurité) : < 24h\n   - 🟠 Important : < 72h\n   - 🟡 Standard : < 5 jours\n\nVous recevez un email de confirmation avec numéro de dossier.",
+            "keywords": ["réclamation", "SAV", "problème", "comment faire"],
+            "related_scenarios": ["SAV-001", "SAV-002", "SAV-003", "SAV-004", "SAV-005"],
+            "popularity": 9,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-garanties-003",
+            "question": "Que faire si mon meuble arrive endommagé ?",
+            "answer": "🚨 **IMPORTANT : Agir IMMÉDIATEMENT lors de la livraison !**\n\n✅ **À FAIRE :**\n1. NE PAS signer le bon de livraison sans vérification\n2. Inspecter le colis devant les livreurs\n3. Si dommage : PRENDRE PHOTOS immédiatement\n4. Faire CONSTATER par livreurs (signature)\n5. SIGNER avec RÉSERVES écrites ou REFUSER\n\n❌ **À NE PAS FAIRE :**\n- Signer sans vérifier\n- Accepter sans réserve si dommage\n- Laisser partir livreurs avant constat\n\n📦 **Vos options :**\n- **Refus total** → Nouvelle livraison + geste commercial\n- **Acceptation avec réserves** → Remplacement pièces\n\n💡 Sans réserves écrites, réclamation difficile !",
+            "keywords": ["livraison", "endommagé", "cassé", "rayé", "abîmé"],
+            "related_scenarios": ["SAV-007"],
+            "popularity": 8,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          }
+        ]
+      },
+      {
+        "id": "livraison",
+        "name": "Livraison",
+        "icon": "🚚",
+        "questions": [
+          {
+            "id": "faq-livraison-001",
+            "question": "Quels sont les délais de livraison ?",
+            "answer": "Les délais varient selon les produits :\n\n⚡ **Produits en stock :**\n- Petits objets déco : 1-2 semaines\n- Meubles standards : 2-4 semaines\n\n🏭 **Fabrication sur-mesure :**\n- Canapés personnalisés : 6-10 semaines\n- Dressings sur-mesure : 8-12 semaines\n- Cuisines : 10-14 semaines\n\n📅 Le délai exact vous est communiqué :\n- Au moment de la commande\n- Par email de confirmation\n- Dans votre espace client\n\n💡 **Livraison prioritaire disponible** (+50€) pour réduire le délai de 30%.",
+            "keywords": ["délai", "livraison", "combien de temps", "quand"],
+            "related_scenarios": [],
+            "popularity": 10,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-livraison-002",
+            "question": "La livraison en étage est-elle incluse ?",
+            "answer": "🏢 **Livraison en étage :**\n\n**Inclus gratuitement :**\n- Rez-de-chaussée\n- 1er étage avec ascenseur\n\n**Supplément requis :**\n- Sans ascenseur : 30€/étage\n- Avec ascenseur (>1er) : 15€/étage\n- Maximum : 3ème étage\n\n**Au-delà du 3ème étage :**\n- Devis sur demande\n- Nécessite monte-meubles\n\n💡 **Service déballage + installation :**\n- Déballage : +30€\n- Installation complète : +80€\n- Évacuation cartons : +20€\n\nPensez à mesurer portes, couloirs et cage d'escalier !",
+            "keywords": ["étage", "livraison", "escalier", "ascenseur", "prix"],
+            "related_scenarios": [],
+            "popularity": 7,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          }
+        ]
+      },
+      {
+        "id": "retour-echange",
+        "name": "Retour et Échange",
+        "icon": "🔄",
+        "questions": [
+          {
+            "id": "faq-retour-001",
+            "question": "Puis-je retourner un meuble si je change d'avis ?",
+            "answer": "✅ **Oui ! Vous avez 14 jours pour changer d'avis** (droit de rétractation légal)\n\n📋 **Conditions :**\n- Produit intact (test normal accepté)\n- Emballage conservé si possible\n- Étiquettes présentes\n- Pas de dommages\n\n🔄 **3 options au choix :**\n\n**1. Retour + Remboursement**\n- Enlèvement : 49€\n- Remboursement sous 14 jours\n\n**2. Échange gratuit (RECOMMANDÉ)**\n- Changement couleur/modèle\n- Aucun frais\n- Délai : 4-6 semaines\n\n**3. Avoir commercial**\n- Crédit 100% sur votre compte\n- Valable 12 mois\n- Utilisable sur tout le site\n\n💡 L'échange est l'option la plus avantageuse !",
+            "keywords": ["retour", "rétractation", "changer avis", "remboursement", "14 jours"],
+            "related_scenarios": ["RETURN-001"],
+            "popularity": 9,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-retour-002",
+            "question": "Comment échanger un produit contre une autre couleur ?",
+            "answer": "🎨 **Échange de couleur - Procédure :**\n\n✅ **Éligibilité :**\n- Dans les 14 jours après livraison\n- Produit intact et propre\n- 1 échange gratuit\n\n📝 **Démarche :**\n1. Contactez-nous (chatbot, email, tél)\n2. Indiquez nouvelle couleur souhaitée\n3. Nous vérifions disponibilité\n4. Confirmation + commande nouveau produit\n5. Livraison nouveau (4-6 semaines)\n6. Enlèvement ancien lors livraison nouveau\n\n💰 **Coût : GRATUIT** (1 échange offert)\n\n📸 **Astuce :** Nous pouvons vous envoyer photos du produit dans la nouvelle couleur en situation réelle pour vous aider à choisir !\n\nContacter le chatbot pour lancer l'échange.",
+            "keywords": ["échange", "couleur", "changer", "autre teinte"],
+            "related_scenarios": ["RETURN-001"],
+            "popularity": 6,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          }
+        ]
+      },
+      {
+        "id": "entretien",
+        "name": "Entretien et Maintenance",
+        "icon": "🧽",
+        "questions": [
+          {
+            "id": "faq-entretien-001",
+            "question": "Comment entretenir mon canapé en cuir ?",
+            "answer": "🛋️ **Guide Entretien Cuir :**\n\n**📅 Quotidien :**\n- Dépoussiérage chiffon microfibre\n- Essuyage taches immédiat (eau + savon doux)\n\n**🧴 Mensuel :**\n- Nettoyage chiffon humide\n- Séchage immédiat\n\n**💆 Tous les 3-6 mois :**\n- Application lait nourrissant cuir\n- Massage circulaire doux\n- Buffage après 1h\n\n**⚠️ À ÉVITER ABSOLUMENT :**\n❌ Produits alcoolisés/solvants\n❌ Eau de Javel\n❌ Soleil direct prolongé\n❌ Chaleur directe (<50cm radiateur)\n❌ Nettoyeur vapeur\n\n**🛡️ Protection :**\n- Plaid sur zones très utilisées\n- Rideaux anti-UV si fenêtre\n- Éloigner sources de chaleur\n\n💡 **Kit entretien cuir : 45€**\nContient tout le nécessaire pour 1 an !",
+            "keywords": ["entretien", "cuir", "nettoyage", "lait", "comment"],
+            "related_scenarios": ["INFO-001"],
+            "popularity": 8,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-entretien-002",
+            "question": "Comment nettoyer un canapé en tissu/velours ?",
+            "answer": "🛋️ **Entretien Tissu/Velours :**\n\n**📅 Hebdomadaire :**\n- Aspiration douce (embout brosse)\n- Brossage velours (sens du poil)\n- Retourner coussins déhoussables\n\n**🧴 Taches fraîches :**\n1. Tamponner (ne pas frotter !)\n2. Eau tiède + savon doux\n3. Chiffon microfibre humide\n4. Sécher zone immédiatement\n\n**🧼 Nettoyage complet (2x/an) :**\n- Shampoing spécial tissus d'ameublement\n- Test zone cachée avant\n- Application mousse (pas liquide direct)\n- Aspiration après séchage complet\n\n**⚠️ NE JAMAIS :**\n❌ Détergents classiques\n❌ Eau de Javel\n❌ Frotter fort (abîme fibres)\n❌ Mouiller excessivement\n\n**🎨 Velours brillant ?**\nBrossage vapeur léger redonne aspect mat.\n\n💡 **Housses déhoussables :** Lavage machine 30° programme délicat (vérifier étiquette).",
+            "keywords": ["tissu", "velours", "nettoyage", "tache", "laver"],
+            "related_scenarios": ["SAV-003"],
+            "popularity": 7,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-entretien-003",
+            "question": "Mon matelas s'affaisse, que faire ?",
+            "answer": "🛏️ **Affaissement Matelas :**\n\n**🔍 Vérification garantie :**\nGarantie 10 ans si affaissement >2,5cm\n\n**📏 Comment mesurer :**\n1. Placer règle droite sur longueur\n2. Mesurer profondeur du creux au centre\n3. Prendre photo règle + creux\n4. Si >2,5cm → Sous garantie !\n\n**✅ Prévention :**\n- ↻ Retourner tous les 3 mois (1ère année)\n- ↻ Puis tous les 6 mois\n- Vérifier lattes sommier (écart max 8cm)\n- Utiliser protège-matelas\n\n**🔄 Si sous garantie :**\nÉchange gratuit ou avoir 50%\n\n**📞 Contactez SAV si :**\n- Affaissement >2,5cm\n- Douleurs dorsales persistantes\n- Moins de 10 ans\n\n💡 **Creux léger <2,5cm ?**\nEssayez surmatelas confort 5-7cm.",
+            "keywords": ["matelas", "affaissement", "creux", "dos", "garantie"],
+            "related_scenarios": ["SAV-006"],
+            "popularity": 6,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          }
+        ]
+      },
+      {
+        "id": "paiement",
+        "name": "Paiement et Financement",
+        "icon": "💳",
+        "questions": [
+          {
+            "id": "faq-paiement-001",
+            "question": "Quels moyens de paiement acceptez-vous ?",
+            "answer": "💳 **Moyens de paiement acceptés :**\n\n✅ **En ligne :**\n- Carte bancaire (CB, Visa, Mastercard)\n- PayPal\n- Virement bancaire\n- Paiement en 3x ou 4x sans frais (>300€)\n- Financement 10x, 20x (>1000€)\n\n🏪 **En magasin :**\n- Espèces (max 1000€)\n- Carte bancaire\n- Chèque (avec justificatifs)\n\n**🔐 Sécurité :**\n- Paiement 3D Secure\n- SSL certifié\n- Aucune donnée bancaire conservée\n\n**📅 Paiement différé :**\nPossible jusqu'à 90 jours (selon montant)",
+            "keywords": ["paiement", "carte", "paypal", "comment payer"],
+            "related_scenarios": [],
+            "popularity": 5,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          },
+          {
+            "id": "faq-paiement-002",
+            "question": "Proposez-vous un paiement en plusieurs fois ?",
+            "answer": "✅ **Paiement fractionné disponible !**\n\n**💳 Sans frais (automatique) :**\n- 3x sans frais : >300€\n- 4x sans frais : >500€\n- Aucun justificatif requis\n- Validation immédiate\n\n**🏦 Financement (avec frais) :**\n- 10x : >1000€ (TAEG ~2,9%)\n- 20x : >2000€ (TAEG ~4,5%)\n- Justificatifs requis\n- Validation 48h\n\n**📋 Documents financement :**\n- Pièce d'identité\n- Justificatif domicile <3 mois\n- Dernier bulletin salaire / avis imposition\n\n**✅ Avantages :**\n- Réponse immédiate (en ligne)\n- Pas de frais de dossier\n- Remboursement anticipé possible\n\n💡 Simulation disponible sur chaque fiche produit !",
+            "keywords": ["plusieurs fois", "3 fois", "4 fois", "financement", "crédit"],
+            "related_scenarios": [],
+            "popularity": 8,
+            "helpful_count": 0,
+            "not_helpful_count": 0
+          }
+        ]
+      }
+    ]
+  },
+  "statistics": {
+    "total_views": 0,
+    "total_helpful_votes": 0,
+    "total_not_helpful_votes": 0,
+    "most_popular_category": "",
+    "last_question_added": "2025-12-03"
+  },
+  "admin_notes": [
+    "Cette FAQ doit être enrichie régulièrement avec les vraies questions clients",
+    "Utiliser les statistiques pour identifier questions populaires",
+    "Mettre à jour selon feedback clients (helpful/not helpful)",
+    "Ajouter nouvelles questions identifiées via chatbot conversations",
+    "Réviser réponses selon évolution produits/services"
+  ]
+}
