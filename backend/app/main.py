@@ -17,7 +17,7 @@ from app.core.middleware import setup_security_middleware
 from app.core.rate_limit import setup_rate_limiter
 from app.core.redis import CacheManager
 from app.db.session import init_db, close_db
-from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth
+from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, realtime, realtime_ws, voice
 from app.services.storage import StorageManager
 
 # Setup logging
@@ -83,7 +83,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Chatbot intelligent pour Meuble de France - Service client et SAV",
+    description="Chatbot intelligent pour Mobilier de France - Service client et SAV",
     # Disable docs in production
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
@@ -115,8 +115,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-Request-ID"],
+    allow_methods=["*"],
+    allow_headers=["*"],
     expose_headers=["X-Request-ID", "X-Response-Time", "X-RateLimit-Limit", "Retry-After"],
     max_age=600  # Cache preflight for 10 minutes
 )
@@ -137,6 +137,9 @@ app.include_router(products.router, prefix="/api/products", tags=["Products"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["Tickets"])
 app.include_router(faq.router, prefix="/api/faq", tags=["FAQ"])
 app.include_router(sav.router, prefix="/api", tags=["SAV"])
+app.include_router(realtime.router, prefix="/api/realtime", tags=["Realtime Voice"])
+app.include_router(realtime_ws.router, prefix="/api/realtime", tags=["Realtime Voice WebSocket"])
+app.include_router(voice.router, prefix="/api/voice", tags=["Voice (Whisper + TTS)"])
 
 
 @app.get("/", tags=["Root"])

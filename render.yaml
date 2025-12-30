@@ -1,0 +1,58 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: mdf-postgres
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.postgres
+    envVars:
+      - key: POSTGRES_DB
+        value: mobilier_france_db
+      - key: POSTGRES_USER
+        value: postgres
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+
+  # Redis Cache
+  - type: redis
+    name: mdf-redis
+    plan: free
+    maxmemoryPolicy: allkeys-lru
+
+  # Backend API
+  - type: web
+    name: mdf-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromService:
+          type: pserv
+          name: mdf-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: mdf-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+
+  # Frontend
+  - type: web
+    name: mdf-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: mdf-backend
+          envVarKey: RENDER_EXTERNAL_URL

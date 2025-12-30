@@ -1,0 +1,168 @@
+company:
+  name: Mobilier de France
+  short_name: MDF
+  support_email: sav@mobilierdefrance.fr
+  support_phone: +33 1 23 45 67 89
+  website: https://www.mobilierdefrance.fr
+branding:
+  primary_color: '#DC2626'
+  secondary_color: '#F97316'
+  accent_color: '#3B82F6'
+  bot_avatar: M
+  show_company_logo: true
+messages:
+  welcome:
+    fr: Bonjour ! Je suis votre assistant SAV Mobilier de France. Décrivez-moi votre
+      problème avec votre numéro de commande, je m'occupe du reste !
+    en: Hello! I am your Mobilier de France customer support assistant. Describe your
+      problem with your order number, I'll take care of the rest!
+    ar: مرحباً! أنا مساعد خدمة العملاء لشركة Mobilier de France. صف لي مشكلتك مع رقم
+      طلبك، وسأتولى الأمر!
+  request_photos:
+    fr: 📸 Avez-vous des photos du problème pour que je puisse mieux vous aider ?
+    en: 📸 Do you have photos of the problem so I can better assist you?
+    ar: 📸 هل لديك صور للمشكلة حتى أتمكن من مساعدتك بشكل أفضل؟
+  technical_error:
+    fr: Désolé, j'ai rencontré un problème technique. Pouvez-vous réessayer ?
+    en: Sorry, I encountered a technical problem. Can you try again?
+    ar: عذراً، واجهت مشكلة تقنية. هل يمكنك المحاولة مرة أخرى؟
+ai:
+  model: gpt-3.5-turbo
+  temperature: 0.7
+  max_tokens: 300
+  history_limit: 4
+detection:
+  sav_keywords:
+  - problème
+  - probleme
+  - défaut
+  - defaut
+  - cassé
+  - casse
+  - déchirure
+  - dechirure
+  - livraison
+  - retard
+  - garantie
+  - sav
+  - retour
+  - réclamation
+  - reclamation
+  - commande
+  - cmd-
+  - pied
+  - abimé
+  - abime
+  - problem
+  - defect
+  - broken
+  - tear
+  - delivery
+  - warranty
+  - réclamation
+  - insatisfait
+  - remboursement
+  shopping_keywords:
+  - cherche
+  - besoin
+  - acheter
+  - canapé
+  - canape
+  - table
+  - meuble
+  - looking for
+  - need
+  - buy
+  - sofa
+  - furniture
+  - price
+  - devis
+  - catalogue
+  - promotion
+priorities:
+  P0:
+    label: Critique
+    color: '#DC2626'
+    sla_hours: 4
+    keywords:
+    - cassé
+    - rupture
+    - danger
+    - inutilisable
+  P1:
+    label: Urgent
+    color: '#F97316'
+    sla_hours: 24
+    keywords:
+    - déchirure
+    - défaut important
+    - ne fonctionne pas
+  P2:
+    label: Normal
+    color: '#FBBF24'
+    sla_hours: 48
+    keywords:
+    - défaut mineur
+    - petit
+    - grince
+  P3:
+    label: Faible
+    color: '#10B981'
+    sla_hours: 72
+    keywords:
+    - question
+    - information
+    - conseil
+warranty:
+  structure:
+    duration_years: 5
+    exclusions:
+    - Dommages dus à une mauvaise utilisation
+    - Usure normale
+  fabric:
+    duration_years: 2
+    exclusions:
+    - Taches
+    - Déchirures
+    - Brûlures
+    - Usure normale
+  mechanisms:
+    duration_years: 3
+    exclusions:
+    - Dommages dus à une surcharge
+    - Usure normale
+  cushions:
+    duration_years: 2
+    exclusions:
+    - Affaissement naturel
+    - Usure normale
+upload:
+  max_file_size_mb: 10
+  max_files_per_request: 10
+  allowed_extensions:
+    images:
+    - jpg
+    - jpeg
+    - png
+    - gif
+    - webp
+    videos:
+    - mp4
+    - mov
+    - avi
+    - webm
+rate_limit:
+  messages_per_minute: 20
+  uploads_per_hour: 50
+voice:
+  speech_enabled: true
+  voice_input_enabled: true
+  default_voice_language: fr-FR
+notifications:
+  send_email_on_ticket_creation: true
+  send_sms_for_urgent_tickets: false
+  sav_team_email: equipe-sav@mobilierdefrance.fr
+analytics:
+  log_level: INFO
+  keep_conversation_history: true
+  history_retention_days: 90

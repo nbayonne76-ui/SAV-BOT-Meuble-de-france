@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+
+# Package manager
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

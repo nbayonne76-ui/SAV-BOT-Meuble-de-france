@@ -1,0 +1,447 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📊 CONFIGURATION DU TABLEAU DE BORD SAV
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ce fichier permet de personnaliser l'apparence et le comportement du tableau
+# de bord sans modifier le code source.
+#
+# ⚠️  IMPORTANT: Après modification, redémarrer le frontend pour appliquer les changements
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎨 APPARENCE GÉNÉRALE
+# ───────────────────────────────────────────────────────────────────────────────
+appearance:
+  title: "Tableau de Bord SAV"
+  subtitle: "Gestion centralisée des réclamations clients"
+
+  # Thème de couleurs
+  theme:
+    primary: "#DC2626"          # Rouge principal
+    secondary: "#F97316"        # Orange
+    success: "#10B981"          # Vert
+    warning: "#FBBF24"          # Jaune
+    danger: "#EF4444"           # Rouge danger
+    info: "#3B82F6"             # Bleu
+
+  # Afficher le logo de l'entreprise
+  show_logo: true
+
+  # Mode sombre par défaut
+  dark_mode_default: false
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📈 STATISTIQUES AFFICHÉES (Cartes en haut)
+# ───────────────────────────────────────────────────────────────────────────────
+statistics:
+  # Carte 1: Total des tickets
+  total_tickets:
+    enabled: true
+    label: "Total Tickets"
+    icon: "📊"
+    color: "#3B82F6"
+
+  # Carte 2: Tickets critiques (P0)
+  critical_tickets:
+    enabled: true
+    label: "Critiques (P0)"
+    icon: "🔴"
+    color: "#DC2626"
+
+  # Carte 3: Tickets urgents (P1)
+  urgent_tickets:
+    enabled: true
+    label: "Urgents (P1)"
+    icon: "🟠"
+    color: "#F97316"
+
+  # Carte 4: Tickets auto-résolus
+  auto_resolved:
+    enabled: true
+    label: "Auto-résolus"
+    icon: "✅"
+    color: "#10B981"
+
+  # Cartes supplémentaires (optionnelles)
+  average_resolution_time:
+    enabled: false
+    label: "Temps moyen résolution"
+    icon: "⏱️"
+
+  satisfaction_rate:
+    enabled: false
+    label: "Taux de satisfaction"
+    icon: "⭐"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔽 FILTRES DISPONIBLES
+# ───────────────────────────────────────────────────────────────────────────────
+filters:
+  # Filtre par priorité
+  priority:
+    enabled: true
+    label: "Priorité:"
+    default: "all"  # "all", "P0", "P1", "P2", "P3"
+
+  # Filtre par statut
+  status:
+    enabled: true
+    label: "Statut:"
+    default: "all"  # "all", "pending", "in_progress", "resolved", etc.
+
+  # Filtre par date
+  date_range:
+    enabled: true
+    label: "Période:"
+    default: "last_7_days"  # "today", "last_7_days", "last_30_days", "all"
+
+  # Filtre par garantie
+  warranty:
+    enabled: false
+    label: "Garantie:"
+    options:
+      - "all"
+      - "covered"
+      - "not_covered"
+      - "expired"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📋 COLONNES DU TABLEAU
+# ───────────────────────────────────────────────────────────────────────────────
+columns:
+  # Ordre d'affichage des colonnes
+  order:
+    - "ticket_id"
+    - "customer"
+    - "problem"
+    - "priority"
+    - "tone"
+    - "status"
+    - "date"
+    - "actions"
+
+  # Configuration de chaque colonne
+  ticket_id:
+    enabled: true
+    label: "TICKET"
+    width: "120px"
+    sortable: true
+
+  customer:
+    enabled: true
+    label: "CLIENT"
+    width: "150px"
+    sortable: true
+    # Afficher email ou juste nom
+    show_email: false
+
+  problem:
+    enabled: true
+    label: "PROBLÈME"
+    width: "250px"
+    sortable: false
+    # Tronquer après X caractères
+    max_chars: 50
+
+  priority:
+    enabled: true
+    label: "PRIORITÉ"
+    width: "100px"
+    sortable: true
+    # Afficher badge coloré
+    show_badge: true
+
+  tone:
+    enabled: true
+    label: "TON"
+    width: "100px"
+    sortable: true
+    # Options: "neutral", "urgent", "angry", "polite"
+    show_emoji: true
+
+  status:
+    enabled: true
+    label: "STATUT"
+    width: "150px"
+    sortable: true
+    show_badge: true
+
+  date:
+    enabled: true
+    label: "DATE"
+    width: "120px"
+    sortable: true
+    # Format: "relative" (il y a 2h) ou "absolute" (10/12/2024)
+    format: "relative"
+
+  actions:
+    enabled: true
+    label: "ACTIONS"
+    width: "100px"
+
+  # Colonnes optionnelles (désactivées par défaut)
+  order_number:
+    enabled: false
+    label: "COMMANDE"
+    width: "130px"
+
+  product:
+    enabled: false
+    label: "PRODUIT"
+    width: "180px"
+
+  warranty:
+    enabled: false
+    label: "GARANTIE"
+    width: "100px"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔘 BOUTONS D'ACTION
+# ───────────────────────────────────────────────────────────────────────────────
+actions:
+  # Bouton "Voir détails" (icône œil)
+  view_details:
+    enabled: true
+    icon: "👁️"
+    color: "#3B82F6"
+    tooltip: "Voir le dossier complet"
+
+  # Bouton "Éditer"
+  edit:
+    enabled: false
+    icon: "✏️"
+    color: "#F59E0B"
+    tooltip: "Modifier le ticket"
+
+  # Bouton "Supprimer"
+  delete:
+    enabled: false
+    icon: "🗑️"
+    color: "#EF4444"
+    tooltip: "Supprimer le ticket"
+    # Demander confirmation
+    require_confirmation: true
+
+  # Bouton "Marquer comme résolu"
+  mark_resolved:
+    enabled: false
+    icon: "✅"
+    color: "#10B981"
+    tooltip: "Marquer comme résolu"
+
+  # Bouton "Assigner"
+  assign:
+    enabled: false
+    icon: "👤"
+    color: "#8B5CF6"
+    tooltip: "Assigner à un agent"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📄 MODAL DE DÉTAILS (Popup)
+# ───────────────────────────────────────────────────────────────────────────────
+modal:
+  # Largeur de la modal
+  width: "90%"
+  max_width: "1200px"
+
+  # Sections affichées dans l'ordre
+  sections:
+    - "ticket_info"
+    - "client_info"
+    - "product_info"
+    - "problem_description"
+    - "tone_analysis"
+    - "warranty_check"
+    - "photos_videos"
+    - "sla"
+    - "resolution"
+    - "client_summary"
+    - "action_history"
+
+  # Configuration de chaque section
+  ticket_info:
+    enabled: true
+    title: "📋 Informations Ticket"
+    collapsible: false
+
+  client_info:
+    enabled: true
+    title: "👤 Informations Client"
+    collapsible: true
+
+  product_info:
+    enabled: true
+    title: "🛋️ Produit Concerné"
+    collapsible: true
+
+  problem_description:
+    enabled: true
+    title: "⚠️ Description du Problème"
+    collapsible: false
+
+  tone_analysis:
+    enabled: true
+    title: "🎭 Analyse du Ton"
+    collapsible: true
+
+  warranty_check:
+    enabled: true
+    title: "🛡️ Vérification Garantie"
+    collapsible: true
+
+  photos_videos:
+    enabled: true
+    title: "📸 Photos & Vidéos"
+    collapsible: false
+    # Nombre de colonnes pour la galerie
+    gallery_columns: 3
+
+  sla:
+    enabled: true
+    title: "⏰ SLA & Délais"
+    collapsible: true
+
+  resolution:
+    enabled: true
+    title: "✅ Résolution"
+    collapsible: true
+
+  client_summary:
+    enabled: true
+    title: "📧 Récapitulatif Client"
+    collapsible: true
+
+  action_history:
+    enabled: true
+    title: "📜 Historique des Actions"
+    collapsible: true
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎯 STATUTS DES TICKETS
+# ───────────────────────────────────────────────────────────────────────────────
+statuses:
+  pending:
+    label: "En attente"
+    label_fr: "En attente"
+    label_en: "Pending"
+    color: "#FBBF24"
+    icon: "⏳"
+
+  in_progress:
+    label: "En cours"
+    label_fr: "En cours"
+    label_en: "In Progress"
+    color: "#3B82F6"
+    icon: "🔄"
+
+  escalated_to_human:
+    label: "Escaladé"
+    label_fr: "Escaladé à l'équipe"
+    label_en: "Escalated"
+    color: "#F97316"
+    icon: "⬆️"
+
+  resolved:
+    label: "Résolu"
+    label_fr: "Résolu"
+    label_en: "Resolved"
+    color: "#10B981"
+    icon: "✅"
+
+  closed:
+    label: "Fermé"
+    label_fr: "Fermé"
+    label_en: "Closed"
+    color: "#6B7280"
+    icon: "🔒"
+
+  cancelled:
+    label: "Annulé"
+    label_fr: "Annulé"
+    label_en: "Cancelled"
+    color: "#EF4444"
+    icon: "❌"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔔 NOTIFICATIONS & ALERTES
+# ───────────────────────────────────────────────────────────────────────────────
+notifications:
+  # Rafraîchissement automatique du tableau
+  auto_refresh:
+    enabled: true
+    interval_seconds: 30
+
+  # Notification sonore pour nouveaux tickets
+  sound_alerts:
+    enabled: false
+    sound_file: "/sounds/notification.mp3"
+
+  # Notification navigateur pour tickets P0
+  browser_notifications:
+    enabled: false
+    for_priorities: ["P0"]
+
+  # Badge de notification sur l'onglet
+  tab_badge:
+    enabled: true
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📤 EXPORT DE DONNÉES
+# ───────────────────────────────────────────────────────────────────────────────
+export:
+  # Bouton d'export visible
+  enabled: false
+
+  # Formats d'export disponibles
+  formats:
+    - "csv"
+    - "excel"
+    - "pdf"
+
+  # Colonnes à inclure dans l'export
+  include_columns:
+    - "ticket_id"
+    - "date"
+    - "customer_name"
+    - "order_number"
+    - "problem"
+    - "priority"
+    - "status"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔐 PERMISSIONS (pour future gestion multi-utilisateurs)
+# ───────────────────────────────────────────────────────────────────────────────
+permissions:
+  # Qui peut voir tous les tickets
+  view_all_tickets: ["admin", "manager", "agent"]
+
+  # Qui peut modifier les tickets
+  edit_tickets: ["admin", "manager"]
+
+  # Qui peut supprimer les tickets
+  delete_tickets: ["admin"]
+
+  # Qui peut exporter les données
+  export_data: ["admin", "manager"]
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📱 RESPONSIVE & MOBILE
+# ───────────────────────────────────────────────────────────────────────────────
+responsive:
+  # Afficher version mobile sous X pixels
+  mobile_breakpoint: 768
+
+  # Colonnes visibles sur mobile (écran < 768px)
+  mobile_columns:
+    - "ticket_id"
+    - "priority"
+    - "status"
+    - "actions"
+
+  # Colonnes visibles sur tablette (768px - 1024px)
+  tablet_columns:
+    - "ticket_id"
+    - "customer"
+    - "priority"
+    - "status"
+    - "date"
+    - "actions"

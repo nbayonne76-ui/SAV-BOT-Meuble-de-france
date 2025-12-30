@@ -1,0 +1,174 @@
+appearance:
+  title: Tableau de Bord SAV
+  subtitle: Gestion centralisée des réclamations clients
+  theme:
+    primary: '#DC2626'
+    secondary: '#F97316'
+    success: '#10B981'
+    warning: '#FBBF24'
+    danger: '#EF4444'
+    info: '#3B82F6'
+  show_logo: true
+  dark_mode_default: false
+statistics:
+  total_tickets:
+    enabled: true
+    label: Total Tickets
+    icon: 📊
+    color: '#3B82F6'
+  critical_tickets:
+    enabled: true
+    label: Critiques (P0)
+    icon: 🔴
+    color: '#DC2626'
+  urgent_tickets:
+    enabled: true
+    label: Urgents (P1)
+    icon: 🟠
+    color: '#F97316'
+  auto_resolved:
+    enabled: true
+    label: Auto-résolus
+    icon: ✅
+    color: '#10B981'
+filters:
+  priority:
+    enabled: true
+    label: 'Priorité:'
+    default: all
+  status:
+    enabled: true
+    label: 'Statut:'
+    default: all
+  date_range:
+    enabled: true
+    label: 'Période:'
+    default: last_7_days
+columns:
+  order:
+  - ticket_id
+  - customer
+  - problem
+  - priority
+  - tone
+  - status
+  - date
+  ticket_id:
+    enabled: true
+    label: TICKET
+    width: 120px
+    sortable: true
+  customer:
+    enabled: true
+    label: CLIENT
+    width: 150px
+    sortable: true
+  problem:
+    enabled: true
+    label: PROBLÈME
+    width: 250px
+    sortable: false
+    max_chars: 50
+  priority:
+    enabled: true
+    label: PRIORITÉ
+    width: 100px
+    sortable: true
+    show_badge: true
+  tone:
+    enabled: true
+    label: TON
+    width: 100px
+    sortable: true
+    show_emoji: true
+  status:
+    enabled: true
+    label: STATUT
+    width: 150px
+    sortable: true
+    show_badge: true
+  date:
+    enabled: true
+    label: DATE
+    width: 120px
+    sortable: true
+    format: relative
+  actions:
+    enabled: true
+    label: ACTIONS
+    width: 100px
+actions:
+  view_details:
+    enabled: true
+    icon: 👁️
+    color: '#3B82F6'
+    tooltip: Voir le dossier complet
+  edit:
+    enabled: false
+  delete:
+    enabled: false
+  mark_resolved:
+    enabled: false
+modal:
+  width: 90%
+  max_width: 1200px
+  sections:
+  - ticket_info
+  - client_info
+  - product_info
+  - problem_description
+  - tone_analysis
+  - warranty_check
+  - photos_videos
+  - sla
+  - resolution
+  - client_summary
+  - action_history
+statuses:
+  pending:
+    label: En attente
+    color: '#FBBF24'
+    icon: ⏳
+  in_progress:
+    label: En cours
+    color: '#3B82F6'
+    icon: 🔄
+  escalated_to_human:
+    label: Escaladé
+    color: '#F97316'
+    icon: ⬆️
+  resolved:
+    label: Résolu
+    color: '#10B981'
+    icon: ✅
+  closed:
+    label: Fermé
+    color: '#6B7280'
+    icon: 🔒
+notifications:
+  auto_refresh:
+    enabled: true
+    interval_seconds: 30
+  sound_alerts:
+    enabled: false
+  browser_notifications:
+    enabled: false
+  tab_badge:
+    enabled: true
+export:
+  enabled: false
+  formats: []
+responsive:
+  mobile_breakpoint: 768
+  mobile_columns:
+  - ticket_id
+  - priority
+  - status
+  - actions
+  tablet_columns:
+  - ticket_id
+  - customer
+  - priority
+  - status
+  - date
+  - actions

@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.orm import Session
 
-from app.core.security import verify_token, TokenData, verify_api_key
+from app.core.security import verify_token, TokenData, verify_api_key, is_token_revoked, is_user_tokens_revoked
 from app.db.session import get_db
 from app.models.user import UserDB, UserRole, UserStatus, APIKeyDB
 
@@ -36,8 +36,16 @@ async def get_current_user(
     """
     # Try JWT token first
     if token:
+        # Check if token has been revoked
+        if await is_token_revoked(token):
+            return None
+
         token_data = verify_token(token, token_type="access")
         if token_data:
+            # Check if all user tokens have been revoked (e.g., account suspension)
+            if await is_user_tokens_revoked(token_data.user_id):
+                return None
+
             user = db.query(UserDB).filter(UserDB.id == token_data.user_id).first()
             if user and user.status == UserStatus.ACTIVE:
                 return user

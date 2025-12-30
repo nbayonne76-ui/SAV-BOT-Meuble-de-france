@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test API Connection</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+        .loading { background: #fff3cd; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; overflow: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Test de Connexion API Backend</h1>
+
+    <button onclick="testHealth()">Test /health</button>
+    <button onclick="testTickets()">Test /api/sav/tickets</button>
+    <button onclick="clearResults()">Clear Results</button>
+
+    <div id="results"></div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        function addResult(title, status, message, data = null) {
+            const div = document.createElement('div');
+            div.className = `test ${status}`;
+            div.innerHTML = `
+                <h3>${title}</h3>
+                <p>${message}</p>
+                ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testHealth() {
+            addResult('Testing /health', 'loading', 'Connexion en cours...');
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(`${API_URL}/health`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ /health', 'success', `Status: ${response.status}`, data);
+                } else {
+                    addResult('❌ /health', 'error', `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    addResult('❌ /health', 'error', 'Timeout après 10 secondes');
+                } else {
+                    addResult('❌ /health', 'error', `Erreur: ${err.message}`);
+                }
+            }
+        }
+
+        async function testTickets() {
+            addResult('Testing /api/sav/tickets', 'loading', 'Connexion en cours...');
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const response = await fetch(`${API_URL}/api/sav/tickets`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult('✅ /api/sav/tickets', 'success', `Status: ${response.status}`, data);
+                } else {
+                    addResult('❌ /api/sav/tickets', 'error', `HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (err) {
+                if (err.name === 'AbortError') {
+                    addResult('❌ /api/sav/tickets', 'error', 'Timeout après 10 secondes');
+                } else {
+                    addResult('❌ /api/sav/tickets', 'error', `Erreur: ${err.message}`);
+                }
+            }
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            setTimeout(testHealth, 500);
+            setTimeout(testTickets, 1500);
+        });
+    </script>
+</body>
+</html>

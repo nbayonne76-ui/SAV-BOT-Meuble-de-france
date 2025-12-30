@@ -31,7 +31,7 @@ def get_file_directory(filename: str) -> Path:
         return VIDEOS_DIR
     return PHOTOS_DIR
 
-@router.post("/", status_code=status.HTTP_200_OK)
+@router.post("", status_code=status.HTTP_200_OK)
 async def upload_files(files: List[UploadFile] = File(...)):
     """
     Upload photos or videos

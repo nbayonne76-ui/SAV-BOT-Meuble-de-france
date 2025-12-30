@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ouvrir le Chatbot - Mobilier de France</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .link-box {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+        .big-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: #667eea;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .big-button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        #testResult {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .code {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Chatbot Mobilier de France</h1>
+
+        <div class="status success">
+            <strong>✅ Services actifs</strong><br>
+            Frontend, Backend, PostgreSQL et Redis sont opérationnels
+        </div>
+
+        <h2>📍 Accéder au Chatbot</h2>
+
+        <div class="link-box">
+            <h3>Option 1: localhost</h3>
+            <a href="http://localhost:5173" class="big-button" target="_blank">
+                🚀 Ouvrir http://localhost:5173
+            </a>
+        </div>
+
+        <div class="link-box">
+            <h3>Option 2: 127.0.0.1</h3>
+            <a href="http://127.0.0.1:5173" class="big-button" target="_blank">
+                🚀 Ouvrir http://127.0.0.1:5173
+            </a>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Test de Connexion</h3>
+            <button onclick="testConnection()" class="big-button">
+                Tester la Connexion
+            </button>
+            <div id="testResult"></div>
+        </div>
+
+        <h2>📚 Ressources Utiles</h2>
+        <div class="link-box">
+            <ul>
+                <li><strong>Dashboard SAV:</strong> <a href="http://localhost:5173" target="_blank">http://localhost:5173</a></li>
+                <li><strong>API Backend:</strong> <a href="http://localhost:8000/health" target="_blank">http://localhost:8000/health</a></li>
+                <li><strong>Documentation API:</strong> <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a></li>
+            </ul>
+        </div>
+
+        <h2>🎯 Tester la Création de Ticket</h2>
+        <div class="link-box">
+            <p><strong>Étape 1:</strong> Envoyez un message comme:</p>
+            <div class="code">
+                Bonjour, j'ai un problème avec mon canapé OSLO,
+                commande CMD-2024-12345. Le pied gauche s'est cassé.
+            </div>
+            <p><strong>Étape 2:</strong> Quand le bot demande confirmation, tapez:</p>
+            <div class="code">OUI</div>
+            <p><strong>Étape 3:</strong> Le ticket sera créé automatiquement! 🎉</p>
+        </div>
+
+        <div class="status warning" style="margin-top: 30px;">
+            <strong>⚠️ Problème d'accès?</strong><br>
+            Vérifiez que votre pare-feu Windows autorise le port 5173<br>
+            Essayez de redémarrer les services avec: <code>docker-compose restart</code>
+        </div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = '<div style="background: #fff3cd; padding: 10px; border-radius: 5px;">⏳ Test en cours...</div>';
+
+            try {
+                // Test Backend
+                const backendResponse = await fetch('http://localhost:8000/health');
+                const backendOk = backendResponse.ok;
+
+                // Test Frontend
+                const frontendResponse = await fetch('http://localhost:5173/');
+                const frontendOk = frontendResponse.ok;
+
+                if (backendOk && frontendOk) {
+                    resultDiv.innerHTML = '<div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 5px;">' +
+                        '<strong>✅ Connexion réussie!</strong><br>' +
+                        'Backend: ✅ Opérationnel<br>' +
+                        'Frontend: ✅ Opérationnel<br>' +
+                        '<strong>Vous pouvez maintenant utiliser le chatbot!</strong>' +
+                        '</div>';
+                } else {
+                    resultDiv.innerHTML = '<div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px;">' +
+                        '<strong>⚠️ Problème détecté</strong><br>' +
+                        'Backend: ' + (backendOk ? '✅' : '❌') + '<br>' +
+                        'Frontend: ' + (frontendOk ? '✅' : '❌') + '<br>' +
+                        'Essayez de redémarrer les services.' +
+                        '</div>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<div style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px;">' +
+                    '<strong>❌ Erreur de connexion</strong><br>' +
+                    'Impossible de se connecter aux services.<br>' +
+                    'Vérifiez que Docker est bien lancé et que les ports ne sont pas bloqués.<br>' +
+                    'Erreur: ' + error.message +
+                    '</div>';
+            }
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            setTimeout(testConnection, 1000);
+        });
+    </script>
+</body>
+</html>

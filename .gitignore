@@ -1,1 +1,69 @@
+# Environment variables
 .env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Secrets and credentials
+*.pem
+*.key
+*.cert
+.secrets/
+credentials.json
+
+# Logs
+*.log
+logs/
+backend/logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm/
+.yarn/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+docker-compose.override.yml
+
+# Uploads (keep structure but not files)
+uploads/**
+!uploads/.gitkeep
+backend/uploads/**
+!backend/uploads/.gitkeep
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+chatbot.db
+
+# Temporary files
+*.tmp
+*.bak
+*.backup

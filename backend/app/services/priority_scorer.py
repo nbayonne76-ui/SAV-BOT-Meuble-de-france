@@ -8,6 +8,15 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
+from app.core.constants import (
+    PRIORITY_SLA_TIMES,
+    PROBLEM_TYPE_WEIGHTS,
+    SEVERITY_WEIGHTS,
+    CUSTOMER_TIER_WEIGHTS,
+    CRITICAL_KEYWORDS_SCORE,
+    SCORE_TO_PRIORITY_THRESHOLDS
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,13 +37,8 @@ class PriorityScorer:
     """
 
     def __init__(self):
-        # Configuration des temps de réponse par priorité
-        self.response_times = {
-            "P0": {"response_hours": 4, "intervention_hours": 24},
-            "P1": {"response_hours": 24, "intervention_hours": 48},
-            "P2": {"response_hours": 120, "intervention_hours": 168},  # 5j / 7j
-            "P3": {"response_hours": 168, "intervention_hours": 336}   # 7j / 14j
-        }
+        # Configuration des temps de réponse par priorité - importée depuis constants.py
+        self.response_times = PRIORITY_SLA_TIMES
 
     def calculate_priority(
         self,
@@ -68,29 +72,12 @@ class PriorityScorer:
         factors = []
 
         # FACTEUR 1: Type de problème (0-30 points)
-        problem_weights = {
-            "structural": 30,
-            "mechanism": 25,
-            "delivery": 20,
-            "dimensions": 18,
-            "cushions": 15,
-            "assembly": 15,
-            "fabric": 10,
-            "smell": 8,
-            "unknown": 5
-        }
-        problem_score = problem_weights.get(problem_category, 10)
+        problem_score = PROBLEM_TYPE_WEIGHTS.get(problem_category, 10)
         score += problem_score
         factors.append(f"Type problème ({problem_category}): +{problem_score}")
 
         # FACTEUR 2: Sévérité initiale (0-25 points)
-        severity_weights = {
-            "P0": 25,
-            "P1": 20,
-            "P2": 10,
-            "P3": 5
-        }
-        severity_score = severity_weights.get(problem_severity, 10)
+        severity_score = SEVERITY_WEIGHTS.get(problem_severity, 10)
         score += severity_score
         factors.append(f"Sévérité ({problem_severity}): +{severity_score}")
 
@@ -120,21 +107,14 @@ class PriorityScorer:
         factors.append(f"Garantie ({'active' if under_warranty else 'expirée'}): +{warranty_score}")
 
         # FACTEUR 5: Niveau client (0-15 points)
-        tier_scores = {
-            "vip": 15,
-            "gold": 12,
-            "silver": 8,
-            "standard": 5
-        }
-        tier_score = tier_scores.get(customer_tier.lower(), 5)
+        tier_score = CUSTOMER_TIER_WEIGHTS.get(customer_tier.lower(), 0)
         score += tier_score
         factors.append(f"Fidélité ({customer_tier}): +{tier_score}")
 
-        # FACTEUR 6: Mots-clés critiques (0-10 points)
+        # FACTEUR 6: Mots-clés critiques (0-20 points)
         if has_critical_keywords:
-            critical_score = 10
-            score += critical_score
-            factors.append(f"Urgence détectée: +{critical_score}")
+            score += CRITICAL_KEYWORDS_SCORE
+            factors.append(f"Urgence détectée: +{CRITICAL_KEYWORDS_SCORE}")
 
         # FACTEUR 7: Historique réclamations (0-10 points)
         if previous_claims_count == 0:
@@ -163,11 +143,11 @@ class PriorityScorer:
         factors.append(f"Valeur produit ({product_value}€): +{value_score}")
 
         # CLASSIFICATION FINALE
-        if score >= 85 or problem_severity == "P0":
+        if score >= SCORE_TO_PRIORITY_THRESHOLDS["P0"] or problem_severity == "P0":
             priority = "P0"
-        elif score >= 65:
+        elif score >= SCORE_TO_PRIORITY_THRESHOLDS["P1"]:
             priority = "P1"
-        elif score >= 45:
+        elif score >= SCORE_TO_PRIORITY_THRESHOLDS["P2"]:
             priority = "P2"
         else:
             priority = "P3"

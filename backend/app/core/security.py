@@ -180,3 +180,112 @@ def verify_api_key(api_key: str, stored_key_hash: str) -> bool:
 def hash_api_key(api_key: str) -> str:
     """Hash an API key for storage"""
     return pwd_context.hash(api_key)
+
+
+# ===== TOKEN REVOCATION (Redis Blacklist) =====
+
+async def revoke_token(token: str) -> bool:
+    """
+    Revoke a JWT token by adding it to Redis blacklist
+
+    Args:
+        token: The JWT token to revoke
+
+    Returns:
+        True if revoked successfully, False otherwise
+    """
+    try:
+        from app.core.redis import get_cache
+
+        # Decode token to get expiration
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        exp = datetime.fromtimestamp(payload.get("exp"))
+
+        # Calculate remaining TTL in seconds
+        remaining_ttl = int((exp - datetime.utcnow()).total_seconds())
+
+        # Only store if token hasn't expired yet
+        if remaining_ttl > 0:
+            cache = get_cache()
+            # Store in Redis with TTL matching token expiration
+            await cache.set(f"revoked_token:{token}", "1", expire=remaining_ttl)
+            return True
+
+        return False
+    except Exception as e:
+        # Log error but don't fail - worst case, token stays valid until expiry
+        import logging
+        logging.error(f"Failed to revoke token: {e}")
+        return False
+
+
+async def is_token_revoked(token: str) -> bool:
+    """
+    Check if a JWT token has been revoked
+
+    Args:
+        token: The JWT token to check
+
+    Returns:
+        True if token is revoked, False otherwise
+    """
+    try:
+        from app.core.redis import get_cache
+
+        cache = get_cache()
+        result = await cache.get(f"revoked_token:{token}")
+        return result is not None
+    except Exception as e:
+        # If Redis is down, fail open (allow access)
+        # This prevents Redis outage from locking out all users
+        import logging
+        logging.error(f"Failed to check token revocation: {e}")
+        return False
+
+
+async def revoke_user_tokens(user_id: str) -> bool:
+    """
+    Revoke all tokens for a specific user
+    This is useful when forcing logout or account suspension
+
+    Args:
+        user_id: The user ID whose tokens should be revoked
+
+    Returns:
+        True if operation succeeded
+    """
+    try:
+        from app.core.redis import get_cache
+
+        cache = get_cache()
+        # Store a user-level revocation flag
+        # Valid for max refresh token expiration time
+        expire_seconds = REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+        await cache.set(f"revoked_user:{user_id}", "1", expire=expire_seconds)
+        return True
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to revoke user tokens: {e}")
+        return False
+
+
+async def is_user_tokens_revoked(user_id: str) -> bool:
+    """
+    Check if all tokens for a user have been revoked
+
+    Args:
+        user_id: The user ID to check
+
+    Returns:
+        True if all user tokens are revoked
+    """
+    try:
+        from app.core.redis import get_cache
+
+        cache = get_cache()
+        result = await cache.get(f"revoked_user:{user_id}")
+        return result is not None
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to check user token revocation: {e}")
+        return False

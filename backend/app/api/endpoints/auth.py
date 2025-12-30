@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from app.db.session import get_db
+from app.api.deps import get_current_active_user, oauth2_scheme
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -230,15 +231,23 @@ async def refresh_token(
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    current_user: UserDB = Depends(get_current_active_user)
+    current_user: UserDB = Depends(get_current_active_user),
+    token: str = Depends(oauth2_scheme)
 ):
     """
-    Logout current user.
-    Note: With JWT, true logout requires client-side token deletion.
-    For full security, implement token blacklisting with Redis.
+    Logout current user by revoking their JWT token.
+    The token is added to a Redis blacklist and will be rejected for future requests.
     """
-    logger.info(f"User logged out: {current_user.username}")
-    return MessageResponse(message="Successfully logged out")
+    from app.core.security import revoke_token
+
+    # Revoke the current access token
+    if token:
+        await revoke_token(token)
+        logger.info(f"User logged out and token revoked: {current_user.username}")
+    else:
+        logger.info(f"User logged out (no token to revoke): {current_user.username}")
+
+    return MessageResponse(message="Successfully logged out. Your token has been revoked.")
 
 
 @router.get("/me", response_model=UserResponse)

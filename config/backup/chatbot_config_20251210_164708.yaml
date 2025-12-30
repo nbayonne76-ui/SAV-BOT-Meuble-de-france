@@ -1,0 +1,296 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# 🤖 CONFIGURATION DU CHATBOT SAV
+# ═══════════════════════════════════════════════════════════════════════════════
+# Ce fichier permet de personnaliser entièrement le comportement du chatbot
+# sans modifier le code source.
+#
+# ⚠️  IMPORTANT: Après modification, redémarrer le backend pour appliquer les changements
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🏢 INFORMATIONS ENTREPRISE
+# ───────────────────────────────────────────────────────────────────────────────
+company:
+  name: "Mobilier de France"
+  short_name: "MDF"
+  support_email: "sav@mobilierdefrance.fr"
+  support_phone: "+33 1 23 45 67 89"
+  website: "https://www.mobilierdefrance.fr"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎨 BRANDING & INTERFACE
+# ───────────────────────────────────────────────────────────────────────────────
+branding:
+  primary_color: "#DC2626"        # Rouge principal
+  secondary_color: "#F97316"      # Orange secondaire
+  accent_color: "#3B82F6"         # Bleu accent
+  bot_avatar: "M"                 # Lettre ou emoji pour l'avatar du bot
+  show_company_logo: true
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 💬 MESSAGES DU CHATBOT
+# ───────────────────────────────────────────────────────────────────────────────
+messages:
+  # Message d'accueil affiché au démarrage
+  welcome:
+    fr: "👋 Bonjour ! Je suis votre assistant SAV Mobilier de France.\n\nDécrivez-moi votre problème avec votre numéro de commande, je m'occupe du reste !\n\n💡 **Exemple** : \"Bonjour, je m'appelle Marie Martin. Mon canapé OSLO a le pied cassé, commande CMD-2024-12345\""
+    en: "👋 Hello! I'm your Mobilier de France after-sales assistant.\n\nDescribe your problem with your order number, I'll take care of the rest!\n\n💡 **Example**: \"Hello, my name is Marie Martin. My OSLO sofa has a broken leg, order CMD-2024-12345\""
+    ar: "👋 مرحباً! أنا مساعد خدمة ما بعد البيع لشركة Mobilier de France.\n\nصف لي مشكلتك مع رقم طلبك، وسأتولى الأمر!\n\n💡 **مثال**: \"مرحباً، اسمي ماري مارتن. أريكة OSLO الخاصة بي بها ساق مكسورة، طلب CMD-2024-12345\""
+
+  # Message après création de ticket
+  ticket_created:
+    fr: "✅ Parfait ! Votre ticket SAV **{ticket_id}** a bien été créé.\n\nNotre équipe va l'examiner et vous contacter sous **{sla_hours}h**.\n\nSouhaitez-vous continuer à discuter de ce problème ou clôturer la conversation ? 🔧"
+    en: "✅ Perfect! Your support ticket **{ticket_id}** has been created.\n\nOur team will review it and contact you within **{sla_hours}h**.\n\nWould you like to continue discussing this issue or close the conversation? 🔧"
+    ar: "✅ تمام! تم إنشاء تذكرة الدعم **{ticket_id}** الخاصة بك.\n\nسيقوم فريقنا بمراجعتها والاتصال بك في غضون **{sla_hours} ساعة**.\n\nهل ترغب في مواصلة مناقشة هذه المشكلة أم إغلاق المحادثة؟ 🔧"
+
+  # Message demandant des photos
+  request_photos:
+    fr: "📸 Avez-vous des photos du problème pour que je puisse mieux vous aider ?"
+    en: "📸 Do you have photos of the problem so I can better assist you?"
+    ar: "📸 هل لديك صور للمشكلة حتى أتمكن من مساعدتك بشكل أفضل؟"
+
+  # Message d'erreur technique
+  technical_error:
+    fr: "Désolé, j'ai rencontré un problème technique. Pouvez-vous réessayer ?"
+    en: "Sorry, I encountered a technical problem. Can you try again?"
+    ar: "عذراً، واجهت مشكلة تقنية. هل يمكنك المحاولة مرة أخرى؟"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🧠 PARAMÈTRES IA (OpenAI)
+# ───────────────────────────────────────────────────────────────────────────────
+ai:
+  # Modèle OpenAI à utiliser
+  # Options: "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"
+  # 💰 gpt-3.5-turbo = le moins cher (recommandé pour production)
+  model: "gpt-3.5-turbo"
+
+  # Créativité des réponses (0.0 = très factuel, 1.0 = très créatif)
+  temperature: 0.7
+
+  # Longueur maximale des réponses (en tokens)
+  # 500 tokens ≈ 375 mots ≈ 1-2 paragraphes
+  max_tokens: 500
+
+  # Nombre de messages d'historique à conserver
+  # Plus = meilleure mémoire mais plus coûteux
+  history_limit: 6
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔍 DÉTECTION AUTOMATIQUE (Mots-clés)
+# ───────────────────────────────────────────────────────────────────────────────
+detection:
+  # Mots-clés pour détecter une demande SAV
+  sav_keywords:
+    - "problème"
+    - "probleme"
+    - "défaut"
+    - "defaut"
+    - "cassé"
+    - "casse"
+    - "abimé"
+    - "abime"
+    - "déchirure"
+    - "dechirure"
+    - "livraison"
+    - "retard"
+    - "garantie"
+    - "sav"
+    - "retour"
+    - "réclamation"
+    - "reclamation"
+    - "commande"
+    - "cmd-"
+    - "pied"
+    - "tache"
+    - "problem"
+    - "defect"
+    - "broken"
+    - "damaged"
+    - "tear"
+    - "delivery"
+    - "warranty"
+
+  # Mots-clés pour détecter une demande shopping
+  shopping_keywords:
+    - "cherche"
+    - "besoin"
+    - "acheter"
+    - "canapé"
+    - "canape"
+    - "table"
+    - "meuble"
+    - "prix"
+    - "commander"
+    - "looking for"
+    - "need"
+    - "buy"
+    - "sofa"
+    - "furniture"
+    - "price"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎯 PRIORITÉS DES TICKETS
+# ───────────────────────────────────────────────────────────────────────────────
+priorities:
+  # P0 - Critique (Intervention immédiate)
+  P0:
+    label: "Critique"
+    color: "#DC2626"
+    sla_hours: 4
+    keywords:
+      - "cassé"
+      - "rupture"
+      - "danger"
+      - "inutilisable"
+      - "accident"
+      - "énorme"
+      - "broken"
+      - "dangerous"
+      - "unusable"
+
+  # P1 - Urgent (Intervention rapide)
+  P1:
+    label: "Urgent"
+    color: "#F97316"
+    sla_hours: 24
+    keywords:
+      - "déchirure"
+      - "défaut important"
+      - "tache"
+      - "ne fonctionne pas"
+      - "tear"
+      - "major defect"
+      - "doesn't work"
+
+  # P2 - Normal (Traitement standard)
+  P2:
+    label: "Normal"
+    color: "#FBBF24"
+    sla_hours: 48
+    keywords:
+      - "défaut mineur"
+      - "petit"
+      - "grince"
+      - "léger"
+      - "minor defect"
+      - "small"
+      - "squeaks"
+
+  # P3 - Faible (Peut attendre)
+  P3:
+    label: "Faible"
+    color: "#10B981"
+    sla_hours: 72
+    keywords:
+      - "question"
+      - "information"
+      - "conseil"
+      - "entretien"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🛡️ GARANTIES PAR COMPOSANT
+# ───────────────────────────────────────────────────────────────────────────────
+warranty:
+  # Structure (cadre, pieds, etc.)
+  structure:
+    duration_years: 5
+    exclusions:
+      - "Dommages dus à une mauvaise utilisation"
+      - "Usure normale"
+
+  # Tissu / Revêtement
+  fabric:
+    duration_years: 2
+    exclusions:
+      - "Taches"
+      - "Déchirures"
+      - "Brûlures"
+      - "Usure normale"
+      - "Décoloration due au soleil"
+
+  # Mécanismes (canapé-lit, relax, etc.)
+  mechanisms:
+    duration_years: 3
+    exclusions:
+      - "Dommages dus à une surcharge"
+      - "Usure normale"
+
+  # Coussins / Garnissage
+  cushions:
+    duration_years: 2
+    exclusions:
+      - "Affaissement naturel"
+      - "Usure normale"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📤 UPLOAD DE FICHIERS
+# ───────────────────────────────────────────────────────────────────────────────
+upload:
+  # Taille maximale par fichier (en MB)
+  max_file_size_mb: 10
+
+  # Nombre maximum de fichiers par demande
+  max_files_per_request: 10
+
+  # Extensions autorisées
+  allowed_extensions:
+    images:
+      - "jpg"
+      - "jpeg"
+      - "png"
+      - "gif"
+      - "webp"
+    videos:
+      - "mp4"
+      - "mov"
+      - "avi"
+      - "webm"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# ⏱️ RATE LIMITING (Protection contre abus)
+# ───────────────────────────────────────────────────────────────────────────────
+rate_limit:
+  # Nombre maximum de messages par minute
+  messages_per_minute: 20
+
+  # Nombre maximum d'uploads par heure
+  uploads_per_hour: 50
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎤 FONCTIONNALITÉS VOIX
+# ───────────────────────────────────────────────────────────────────────────────
+voice:
+  # Activer la synthèse vocale
+  speech_enabled: true
+
+  # Activer la reconnaissance vocale
+  voice_input_enabled: true
+
+  # Langue par défaut pour la voix
+  default_voice_language: "fr-FR"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔔 NOTIFICATIONS
+# ───────────────────────────────────────────────────────────────────────────────
+notifications:
+  # Envoyer email au client après création de ticket
+  send_email_on_ticket_creation: true
+
+  # Envoyer SMS au client pour tickets prioritaires (P0, P1)
+  send_sms_for_urgent_tickets: false
+
+  # Email de l'équipe SAV (pour notifications internes)
+  sav_team_email: "equipe-sav@mobilierdefrance.fr"
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📊 ANALYTICS & LOGS
+# ───────────────────────────────────────────────────────────────────────────────
+analytics:
+  # Niveau de logging (DEBUG, INFO, WARNING, ERROR)
+  log_level: "INFO"
+
+  # Conserver l'historique des conversations
+  keep_conversation_history: true
+
+  # Durée de conservation (en jours)
+  history_retention_days: 90

@@ -1,54 +1,40 @@
 // frontend/src/components/ChatInterface.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Camera, X, Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL ?? '';
+
+// Validate API URL is configured
+if (!API_URL) {
+  console.error('VITE_API_URL is not configured. Please set it in your .env file.');
+}
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [sessionId] = useState(`session-${Date.now()}`);
+  const [sessionId] = useState(() => crypto.randomUUID()); // Secure random session ID
   const [isRecording, setIsRecording] = useState(false);
   const [isVoiceSupported, setIsVoiceSupported] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(true); // Activer voix par défaut
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [pendingTicket, setPendingTicket] = useState(null); // Données du ticket en attente de validation
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
   const isRecognitionActive = useRef(false);
   const speechSynthesisRef = useRef(null);
 
-  // Message d'accueil
+  // Message d'accueil - VERSION SIMPLIFIÉE
   useEffect(() => {
-    const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Meuble de France 🛠️
+    const welcomeMessage = `👋 Bonjour ! Je suis votre assistant SAV Mobilier de France.
 
-Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votre réclamation.
+Décrivez-moi votre problème avec votre numéro de commande, je m'occupe du reste !
 
-🎯 **Je vais vous aider à :**
-• Analyser votre problème automatiquement
-• Vérifier votre garantie instantanément
-• Collecter les preuves nécessaires (photos/vidéos)
-• Créer votre ticket SAV en quelques secondes
-• Calculer la priorité et le délai de traitement
-
-📋 **Pour commencer, veuillez me fournir :**
-1. **Votre nom complet**
-2. **Votre numéro de commande**
-3. **La description détaillée de votre problème**
-4. **Des photos du problème** (si possible)
-
-**Exemple :**
-"Bonjour, je m'appelle Jean Dupont. Mon canapé OSLO a un pied cassé, c'est dangereux pour mon enfant! Numéro de commande: CMD-2024-12345"
-
-🎤 **Nouveauté : Communication vocale bidirectionnelle !**
-• Parlez avec le bouton microphone 🎤
-• J'écouterai votre problème
-• Je vous répondrai avec ma voix 🔊
-
-**Je m'occupe du reste automatiquement ! Présentez-vous et expliquez votre problème :**`;
+💡 **Exemple** : "Bonjour, je m'appelle Marie Martin. Mon canapé OSLO a le pied cassé, commande CMD-2024-12345"`;
 
     setMessages([{
       role: 'assistant',
@@ -56,10 +42,10 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
       timestamp: new Date()
     }]);
 
-    // 🔊 Parler le message d'accueil après 1 seconde
+    // 🔊 Parler le message d'accueil - VERSION COURTE
     setTimeout(() => {
       if (isSpeechEnabled) {
-        const shortWelcome = "Bonjour ! Bienvenue au Service Après-Vente de Meuble de France. Je suis votre assistant SAV intelligent. Pour commencer, veuillez me fournir votre nom complet, votre numéro de commande, et la description détaillée de votre problème. Vous pouvez aussi utiliser le bouton microphone pour me parler directement.";
+        const shortWelcome = "Bonjour ! Décrivez-moi votre problème avec votre numéro de commande.";
         speakText(shortWelcome);
       }
     }, 1000);
@@ -283,11 +269,14 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
     try {
       // Appel API backend
-      const response = await fetch(`${API_URL}/api/chat/`, {
+      // Si aucun message mais des photos, envoyer un message par défaut
+      const messageToSend = inputMessage.trim() || (currentFiles.length > 0 ? "[Photo envoyée]" : "");
+
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: inputMessage,
+          message: messageToSend,
           session_id: sessionId,
           photos: currentFiles.map(f => f.url)
         })
@@ -334,7 +323,7 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
           // Réafficher le message d'accueil après 500ms
           setTimeout(() => {
-            const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Meuble de France 🛠️
+            const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Mobilier de France 🛠️
 
 Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votre réclamation.
 
@@ -378,17 +367,25 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
         content: data.response,
         language: data.language,
         conversation_type: data.conversation_type,
-        timestamp: new Date()
+        timestamp: new Date(),
+        isRecap: data.response.includes('Je récapitule') // Marquer les récapitulatifs
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // 🔊 Faire parler le bot automatiquement
-      if (isSpeechEnabled && data.response) {
-        // Petit délai pour laisser le message s'afficher
-        setTimeout(() => {
-          speakText(data.response);
-        }, 300);
+      // 🎯 NOUVEAU: Si le bot envoie des données de ticket (récapitulatif), stocker pour validation
+      if (data.ticket_data) {
+        setPendingTicket(data.ticket_data);
+        console.log('📋 Ticket en attente de validation:', data.ticket_data);
+        // Ne pas faire parler le bot, attendre la validation
+      } else {
+        // 🔊 Faire parler le bot automatiquement (sauf pour les récapitulatifs)
+        if (isSpeechEnabled && data.response) {
+          // Petit délai pour laisser le message s'afficher
+          setTimeout(() => {
+            speakText(data.response);
+          }, 300);
+        }
       }
 
     } catch (error) {
@@ -400,6 +397,119 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
       }]);
     } finally {
       setIsTyping(false);
+    }
+  };
+
+  // 🎯 Confirmer et créer le ticket SAV
+  const handleConfirmTicket = async () => {
+    if (!pendingTicket) return;
+
+    setIsTyping(true);
+
+    try {
+      // Vérifier si le ticket est déjà créé (contient ticket_id)
+      if (pendingTicket.ticket_id) {
+        // Le ticket est déjà créé par le chatbot, juste afficher la confirmation
+        console.log('✅ Ticket déjà créé:', pendingTicket.ticket_id);
+
+        const confirmMessage = {
+          role: 'assistant',
+          content: `Parfait ! Votre ticket SAV a été créé avec succès (N° ${pendingTicket.ticket_id}). Vous pouvez le consulter dans le tableau de bord. Souhaitez-vous autre chose ?`,
+          timestamp: new Date(),
+          isTicketCreated: true
+        };
+
+        setMessages(prev => [...prev, confirmMessage]);
+        setPendingTicket(null);
+
+        // 🔊 Faire parler le message de confirmation
+        if (isSpeechEnabled) {
+          setTimeout(() => {
+            speakText(confirmMessage.content);
+          }, 300);
+        }
+
+        return;
+      }
+
+      // Sinon, créer le ticket via l'API
+      const transcript = messages
+        .map(msg => `${msg.role === 'user' ? 'Client' : 'Assistant'}: ${msg.content}`)
+        .join('\n');
+
+      // Les données sont dans validation_data
+      const ticketData = pendingTicket.validation_data || pendingTicket;
+
+      const response = await fetch(`${API_URL}/api/chat/create-ticket`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customer_name: ticketData.customer_name,
+          problem_description: ticketData.problem_description,
+          product: ticketData.product_name || ticketData.product,
+          order_number: ticketData.order_number,
+          conversation_transcript: transcript,
+          session_id: sessionId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la création du ticket');
+      }
+
+      const result = await response.json();
+      console.log('✅ Ticket créé:', result);
+
+      // Message de confirmation
+      const confirmMessage = {
+        role: 'assistant',
+        content: `Parfait ! Votre ticket SAV a été créé avec succès (N° ${result.ticket_id}). Vous pouvez le consulter dans le tableau de bord. Souhaitez-vous autre chose ?`,
+        timestamp: new Date(),
+        isTicketCreated: true
+      };
+
+      setMessages(prev => [...prev, confirmMessage]);
+
+      // Réinitialiser le ticket en attente
+      setPendingTicket(null);
+
+      // 🔊 Faire parler le message de confirmation
+      if (isSpeechEnabled) {
+        setTimeout(() => {
+          speakText(confirmMessage.content);
+        }, 300);
+      }
+
+    } catch (error) {
+      console.error('Erreur création ticket:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: "Désolé, une erreur s'est produite lors de la création du ticket. Veuillez réessayer.",
+        timestamp: new Date()
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  // 🎯 Annuler et recommencer
+  const handleCancelTicket = () => {
+    setPendingTicket(null);
+
+    // Message d'annulation
+    const cancelMessage = {
+      role: 'assistant',
+      content: "D'accord, recommençons. Pouvez-vous me donner les informations correctes ?",
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, cancelMessage]);
+
+    // 🔊 Faire parler le message
+    if (isSpeechEnabled) {
+      setTimeout(() => {
+        speakText(cancelMessage.content);
+      }, 300);
     }
   };
 
@@ -515,10 +625,10 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
   return (
     <div className="flex flex-col h-full max-w-5xl mx-auto bg-gradient-to-br from-amber-50 to-orange-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 shadow-lg">
+      <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">🛠️ Meuble de France - SAV</h1>
+            <h1 className="text-3xl font-bold">Service clientèle du groupe Mobilier de France</h1>
             <p className="text-sm opacity-90 mt-1">Service Après-Vente Intelligent • Traitement automatisé en temps réel</p>
           </div>
 
@@ -528,8 +638,8 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
               onClick={toggleSpeech}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
                 isSpeechEnabled
-                  ? 'bg-white text-red-600 hover:bg-gray-100'
-                  : 'bg-red-800 text-white hover:bg-red-900'
+                  ? 'bg-white text-blue-600 hover:bg-gray-100'
+                  : 'bg-blue-800 text-white hover:bg-blue-900'
               }`}
               title={isSpeechEnabled ? "Désactiver la voix du bot" : "Activer la voix du bot"}
             >
@@ -577,7 +687,15 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
+                  <p
+                    className="whitespace-pre-line leading-relaxed"
+                    dangerouslySetInnerHTML={{
+                      __html: DOMPurify.sanitize(msg.content, {
+                        ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'br'],
+                        ALLOWED_ATTR: ['href', 'target']
+                      })
+                    }}
+                  />
 
                   {/* Files attachées */}
                   {msg.files && msg.files.length > 0 && (
@@ -639,6 +757,37 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🎯 Boutons de validation du ticket SAV */}
+        {pendingTicket && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-2xl p-6 shadow-xl max-w-2xl mx-auto fade-in">
+            <h3 className="text-xl font-bold text-green-900 mb-3 flex items-center">
+              <span className="text-2xl mr-2">✅</span>
+              Validation du ticket SAV
+            </h3>
+            <p className="text-gray-700 mb-6">
+              Veuillez vérifier les informations ci-dessus et confirmer la création du ticket.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={handleConfirmTicket}
+                disabled={isTyping}
+                className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                <span className="text-2xl mr-2">✅</span>
+                Valider le ticket
+              </button>
+              <button
+                onClick={handleCancelTicket}
+                disabled={isTyping}
+                className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                <span className="text-2xl mr-2">❌</span>
+                Recommencer
+              </button>
             </div>
           </div>
         )}

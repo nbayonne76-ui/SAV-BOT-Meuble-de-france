@@ -412,15 +412,15 @@ async def generate_client_dossier(ticket_id: str):
                 "product_sku": ticket.product_sku,
                 "product_name": ticket.product_name,
                 "product_value": getattr(ticket, 'product_value', 0),
-                "purchase_date": ticket.warranty_check_result.warranty_start_date.isoformat() if ticket.warranty_check_result else None,
-                "delivery_date": ticket.warranty_check_result.warranty_start_date.isoformat() if ticket.warranty_check_result else None
+                "purchase_date": None,  # Date not available in WarrantyCheck model
+                "delivery_date": None   # Date not available in WarrantyCheck model
             },
 
             # ⚠️ PROBLÈME
             "probleme": {
                 "description": ticket.problem_description,
                 "category": ticket.problem_category,
-                "subcategory": ticket.problem_subcategory,
+                "subcategory": None,  # Not available in SAVTicket model
                 "severity": ticket.problem_severity,
                 "confidence": ticket.problem_confidence
             },
@@ -441,8 +441,8 @@ async def generate_client_dossier(ticket_id: str):
             "garantie": {
                 "covered": ticket.warranty_check_result.is_covered if ticket.warranty_check_result else False,
                 "component": ticket.warranty_check_result.component if ticket.warranty_check_result else None,
-                "warranty_type": ticket.warranty_check_result.warranty_type if ticket.warranty_check_result else None,
-                "expiry_date": ticket.warranty_check_result.warranty_expiry_date.isoformat() if ticket.warranty_check_result else None,
+                "warranty_type": None,  # Not available in WarrantyCheck model
+                "days_remaining": ticket.warranty_check_result.days_remaining if ticket.warranty_check_result else None,
                 "reason": ticket.warranty_check_result.reason if ticket.warranty_check_result else None
             },
 
@@ -451,7 +451,7 @@ async def generate_client_dossier(ticket_id: str):
                 {
                     "evidence_id": evidence.evidence_id,
                     "type": evidence.type,
-                    "url": evidence.file_url,
+                    "url": evidence.url,  # Corrigé: 'url' au lieu de 'file_url'
                     "description": evidence.description,
                     "uploaded_at": evidence.uploaded_at.isoformat()
                 }

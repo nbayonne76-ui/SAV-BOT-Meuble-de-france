@@ -1,9 +1,20 @@
 # backend/app/services/chatbot.py
-from openai import OpenAI
+from openai import AsyncOpenAI
 import logging
 from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import json
+from app.core.constants import (
+    OPENAI_MODEL,
+    OPENAI_MAX_TOKENS,
+    OPENAI_TEMPERATURE,
+    CONVERSATION_HISTORY_LIMIT,
+    get_priority_emoji,
+    is_confirmation,
+    is_rejection,
+    is_close_request,
+    is_continue_request
+)
 from app.services.product_catalog import product_catalog
 from app.services.sav_knowledge import sav_kb
 from app.services.sav_workflow_engine import sav_workflow_engine
@@ -15,12 +26,25 @@ logger = logging.getLogger(__name__)
 
 class MeubledeFranceChatbot:
     """
-    Chatbot IA pour Meuble de France - Powered by OpenAI GPT-4
+    Chatbot IA pour Mobilier de France - Powered by OpenAI GPT-4
     Support: Shopping assistance + SAV
+
+    IMPORTANT: Uses AsyncOpenAI for non-blocking API calls
     """
 
-    def __init__(self, api_key: str):
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, api_key: str, timeout: int = 30):
+        """
+        Initialize chatbot with async OpenAI client
+
+        Args:
+            api_key: OpenAI API key
+            timeout: Request timeout in seconds (default: 30)
+        """
+        self.client = AsyncOpenAI(
+            api_key=api_key,
+            timeout=timeout,
+            max_retries=2
+        )
         self.conversation_history = []
         self.client_data = {}
         self.ticket_data = {}
@@ -29,9 +53,13 @@ class MeubledeFranceChatbot:
         # 🎯 NOUVEAU: État de validation du ticket
         self.pending_ticket_validation = None  # Ticket en attente de validation client
         self.awaiting_confirmation = False  # True si on attend "OUI" ou "NON" du client
+        self.awaiting_photos = False  # True si on attend que le client uploade des photos
         # 🎯 NOUVEAU: Gestion de clôture de conversation
         self.should_ask_continue = False  # True après création ticket → demander si continuer
         self.awaiting_continue_or_close = False  # True si on attend "continuer" ou "clôturer"
+        # 🎯 NOUVEAU: Stockage des photos uploadées
+        self.pending_photos = []  # URLs des photos uploadées par le client
+        self.photo_request_sent = False  # True si on a déjà demandé les photos
 
     def detect_product_mention(self, message: str) -> Optional[str]:
         """
@@ -59,183 +87,32 @@ class MeubledeFranceChatbot:
         """Génère le system prompt adapté à la langue"""
 
         prompts = {
-            "fr": """Tu es un assistant SAV professionnel et expert pour Meuble de France, entreprise de mobilier haut de gamme fondée en 1925.
-
-🏢 À PROPOS DE MEUBLE DE FRANCE:
-- Fondée en 1925 (près de 100 ans d'expertise)
-- Spécialiste mobilier personnalisable haut de gamme
-- Gammes: Salon, Salle à manger, Chambre, Décoration
+            "fr": """Tu es l'assistant SAV de Mobilier de France. Sois chaleureux, concis et efficace.
 
 🎯 TON RÔLE:
-- Identifier précisément le produit concerné dans notre catalogue
-- Diagnostiquer le problème avec expertise
-- Proposer solutions adaptées selon produit et garantie
-- Créer dossier SAV avec classification priorité correcte
-- Rassurer avec empathie et professionnalisme
+- Aide le client avec son problème SAV
+- RESTE BREF: Maximum 2-3 phrases par réponse
+- Une question à la fois
+- Pas de longs paragraphes
 
-💬 TON & STYLE:
-- Professionnel mais chaleureux
-- Rassurant: "Ne vous inquiétez pas", "On va résoudre ça ensemble"
-- Expert: Connais parfaitement chaque produit du catalogue
-- Proactif: Anticipe les besoins, pose bonnes questions
-- Clair: Évite jargon technique, explique simplement
+📋 FLUX SIMPLE:
+1. Client mentionne problème + commande → Demande juste: "Avez-vous des photos?"
+2. Photos reçues → Le système génère le récapitulatif automatiquement
+3. Client valide "OUI" → Ticket créé
+4. Après création → Demande: "Souhaitez-vous CONTINUER ou CLÔTURER?"
 
-📋 MÉTHODOLOGIE SAV (CRUCIAL - SUIS CES ÉTAPES):
+💬 STYLE:
+- Court et sympathique
+- Empathique mais pas bavard
+- Max 1-2 émojis par message
+- Évite les répétitions
 
-**1. IDENTIFICATION PRODUIT** ⚠️ PRIORITÉ ABSOLUE
-   - Demander numéro de commande (format CMD-XXXX-XXXXX)
-   - Identifier produit exact du catalogue
-   - Si incertain, demander précisions (couleur, matière, taille, référence)
-   - Vérifier dans base catalogue avant toute recommandation
+🛡️ SI DEMANDÉ:
+Garantie structure: 2-5 ans | Tissus: 1-2 ans | Mécanismes: 2-5 ans
 
-**2. DIAGNOSTIC PROBLÈME**
-   - Écouter attentivement la description complète
-   - Poser questions ciblées selon type de produit:
-     * Canapés: Quelle partie? Coussins/structure/mécanisme?
-     * Tables: Plateau/pieds/mécanisme extension?
-     * Lits: Sommier/vérin/têtes de lit?
-     * Matelas: Affaissement où? Depuis quand?
-   - Vérifier si problème figure dans "common_issues" du produit
-   - Demander photos/vidéos si défaut visuel ou mécanique
+IMPORTANT: Sois BREF - évite les pavés de texte!""",
 
-**3. VÉRIFICATION GARANTIE**
-   - Calculer ancienneté (date achat vs aujourd'hui)
-   - Vérifier couverture selon type:
-     * Structure: 2-5 ans selon produit
-     * Tissus/Cuir: 1-2 ans usure normale
-     * Mécanismes: 2-5 ans selon type
-     * Électronique: 2 ans
-     * Matelas: 10 ans si affaissement >2.5cm
-   - Préciser exclusions (usage anormal, taches, accidents, modifications)
-
-**4. CLASSIFICATION PRIORITÉ** (ESSENTIEL!)
-   🔴 **P0 CRITIQUE**: Danger sécurité immédiat, risque blessure → Réponse <4h, Intervention <24h
-      Exemples: Vérin cassé (retombée lit), pied cassé (chute), verre brisé
-
-   🟠 **P1 HAUTE**: Fonction principale inutilisable, produit ne remplit plus son rôle → <24h
-      Exemples: Mécanisme relax HS, table bloquée, matelas affaissé >5cm
-
-   🟡 **P2 MOYENNE**: Défaut gênant mais produit utilisable → <5 jours
-      Exemples: Affaissement léger coussins, rayure visible, couture défaite
-
-   🟢 **P3 BASSE**: Information, entretien, question simple → <7 jours
-      Exemples: Conseils entretien, retour 14j, questions garantie
-
-**5. PROPOSITION SOLUTION**
-   Selon situation:
-   - **Sous garantie + défaut fabrication**: Remplacement/réparation GRATUIT
-   - **Hors garantie**: Devis intervention (sauf conseils gratuits)
-   - **Usure normale**: Conseils entretien, proposition pièces
-   - **Livraison endommagée**: Refus ou acceptation avec réserves
-
-   Solutions possibles:
-   - Remplacement pièce défectueuse
-   - Intervention technicien domicile
-   - Échange produit complet
-   - Remboursement/avoir
-   - Conseils entretien préventif
-
-**6. DEMANDE DE VALIDATION CLIENT** ⚠️ OBLIGATOIRE AVANT CRÉATION TICKET
-   Après avoir analysé le problème (étapes 1-5), tu DOIS demander confirmation au client:
-
-   📋 RÉCAPITULATIF DE VOTRE DEMANDE SAV
-
-   👤 Client: [Nom du client]
-   🔢 Commande: [CMD-XXXX-XXXXX]
-   🛋️  Produit: [Nom du produit]
-   ⚠️  Problème: [Description du problème détecté]
-   [🔴/🟠/🟡/🟢] Priorité: [P0/P1/P2/P3] - [CRITIQUE/HAUTE/MOYENNE/BASSE]
-   🛡️ Garantie: [✅ Couverte / ❌ Non couverte]
-
-   🔧 SOLUTION PROPOSÉE:
-   [Décris la solution: intervention technicien, remplacement pièce, conseils, etc.]
-
-   ⚠️ CONFIRMEZ-VOUS CES INFORMATIONS ?
-
-   → Tapez "OUI" pour créer le ticket SAV
-   → Tapez "NON" si des informations sont incorrectes
-
-   ⚠️ IMPORTANT: Ne crée JAMAIS le ticket AVANT que le client ait confirmé avec "OUI"
-   Cela évite les erreurs et les demandes non sérieuses.
-
-**7. CRÉATION DOSSIER SAV** (APRÈS validation client)
-   Une fois que le client a tapé "OUI":
-   - ✅ Ticket créé: SAV-YYYYMMDD-XXX
-   - Résumer: Produit + Problème + Priorité
-   - Lister: Actions prises + Prochaines étapes
-   - Timeline: Délai intervention selon priorité
-   - Confirmer: Email récapitulatif envoyé
-   - Indiquer: "Vous pouvez suivre votre ticket dans le Tableau de Bord"
-
-   **⚠️ PUIS OBLIGATOIREMENT** demander au client s'il veut continuer ou clôturer:
-
-   ═══════════════════════════════════════════════════
-   ✅ Votre ticket SAV a été créé avec succès !
-
-   📋 Souhaitez-vous :
-   → Tapez "CONTINUER" si vous avez une autre demande
-   → Tapez "CLÔTURER" pour fermer cette conversation
-
-   (La conversation sera effacée si vous choisissez de clôturer)
-   ═══════════════════════════════════════════════════
-
-**8. GESTION CONTINUATION/CLÔTURE**
-   - Si client dit "CONTINUER" → "Que puis-je faire d'autre pour vous ?"
-   - Si client dit "CLÔTURER" → "Merci pour votre confiance. Au revoir et à bientôt !" (puis la session se ferme automatiquement)
-
-🛡️ GARANTIES MEUBLE DE FRANCE:
-- **Structure**: 2-5 ans selon produit (canapés, lits, tables)
-- **Tissus/Cuir**: 1-2 ans usure normale (déchirures, décoloration)
-- **Mécanismes**: 2-5 ans selon type (relax, extension, vérins)
-- **Électronique**: 2 ans (LED, moteurs, télécommandes)
-- **Matelas**: 10 ans affaissement >2.5cm
-
-**Exclusions**: Usage anormal, modifications client, accidents, taches/liquides, exposition prolongée soleil/chaleur, usure normale après garantie
-
-🧹 ENTRETIEN PAR MATIÈRE:
-**Tissu**: Aspirateur doux hebdomadaire, détachant textile immédiat, nettoyage à sec professionnel
-**Cuir**: Chiffon humide mensuel, lait nourrissant 2x/an, éviter soleil direct
-**Velours**: Brossage sens du poil, nettoyage vapeur si brillance
-**Bois**: Dépoussiérage régulier, cire naturelle 2x/an, éviter eau stagnante
-**Laqué**: Microfibre humide, éviter produits abrasifs/alcool
-**Céramique**: Chiffon humide + détergent doux, résistant aux rayures
-
-💡 CONSEILS IMPORTANTS:
-- ✅ TOUJOURS identifier produit précis avant diagnostic
-- ✅ Référencer infos catalogue (dimensions, matériaux, garantie exacte)
-- ✅ Adapter solutions selon âge et état du produit
-- ✅ Mentionner problèmes courants si pertinent
-- ✅ Proposer entretien préventif pour éviter récidive
-- ✅ Escalader si problème hors compétence ou complexe
-
-⚠️ NE JAMAIS:
-- ❌ Promettre délais sans validation équipe
-- ❌ Garantir solution avant diagnostic complet
-- ❌ Minimiser inquiétude client ("c'est rien", "c'est normal")
-- ❌ Inventer infos produit ou garantie
-- ❌ Ignorer signaux danger sécurité
-- ❌ Proposer produits hors catalogue
-
-🚚 LIVRAISON & RETOURS:
-- **Standard**: 4-8 semaines
-- **Sur-mesure**: 8-12 semaines
-- **Retour 14 jours**: Droit rétractation (produit intact)
-- **Livraison endommagée**: NE PAS SIGNER sans réserves, photos obligatoires
-
-📞 ESCALADE:
-Si situation complexe, danger immédiat, client très insatisfait:
-→ "Je transfère votre dossier en priorité à notre responsable SAV qui vous contactera sous 2h"
-
-🌐 RÉFÉRENCES PRODUITS - IMPORTANT:
-- ❌ NE JAMAIS mentionner de références du type "SAL-CAP-001" (catalogue interne obsolète)
-- ✅ Parle de "canapés d'angle", "tables", "lits" de façon GÉNÉRIQUE
-- ✅ TOUJOURS renvoyer vers le site pour les modèles spécifiques: "Consultez nos modèles sur mobilierdefrance.com"
-- ✅ Pour les canapés d'angle: "Nous avons 139 modèles (TEMPLE, HARMONY, RÉVÉLATION, SAFRAN, etc.) sur: https://www.mobilierdefrance.com/canapes-d-angle"
-- ✅ Si client demande référence ou nom précis: "Pour voir ce modèle en détail avec photos et prix, consultez: https://www.mobilierdefrance.com/canapes-d-angle"
-
-CONSEIL GÉNÉRIQUE UNIQUEMENT - PAS DE RÉFÉRENCES SPÉCIFIQUES.""",
-
-            "en": """You are the virtual assistant for Meuble de France, a high-end furniture company.
+            "en": """You are the virtual assistant for Mobilier de France, a high-end furniture company.
 
 YOUR ROLE:
 - Help customers find perfect furniture for their needs
@@ -270,7 +147,7 @@ PRODUCTS AVAILABLE:
 
 [Rest follows same structure as French...]""",
 
-            "ar": """أنت المساعد الافتراضي لشركة Meuble de France، شركة أثاث راقية.
+            "ar": """أنت المساعد الافتراضي لشركة Mobilier de France، شركة أثاث راقية.
 
 دورك:
 - مساعدة العملاء في العثور على الأثاث المثالي لاحتياجاتهم
@@ -311,17 +188,19 @@ PRODUCTS AVAILABLE:
         """Détecte le type de conversation"""
         message_lower = message.lower()
 
-        # Mots-clés SAV
+        # Mots-clés SAV (avec et sans accents pour robustesse)
         sav_keywords = [
-            "problème", "défaut", "cassé", "déchirure", "livraison", "retard",
-            "garantie", "sav", "retour", "réclamation", "commande",
+            "problème", "probleme", "défaut", "defaut", "cassé", "casse",
+            "déchirure", "dechirure", "livraison", "retard",
+            "garantie", "sav", "retour", "réclamation", "reclamation",
+            "commande", "cmd-", "pied", "abimé", "abime",
             "problem", "defect", "broken", "tear", "delivery", "warranty",
             "مشكلة", "عيب", "مكسور", "تسليم"
         ]
 
         # Mots-clés Shopping
         shopping_keywords = [
-            "cherche", "besoin", "acheter", "canapé", "table", "meuble",
+            "cherche", "besoin", "acheter", "canapé", "canape", "table", "meuble",
             "looking for", "need", "buy", "sofa", "furniture",
             "أبحث", "أريد", "شراء"
         ]
@@ -442,6 +321,71 @@ PRODUCTS AVAILABLE:
             if order_number and not self.client_data:
                 self.client_data = await self.fetch_order_data(order_number)
 
+            # 📸 Stocker les photos uploadées
+            if photos and len(photos) > 0:
+                self.pending_photos.extend(photos)
+                logger.info(f"📸 {len(photos)} photo(s) reçue(s), total: {len(self.pending_photos)}")
+
+                # 🎯 NOUVEAU: Si on attendait des photos, générer le récapitulatif de validation
+                if self.awaiting_photos and self.pending_ticket_validation:
+                    logger.info("📋 Photos reçues → Génération récapitulatif de validation")
+                    validation_summary = self.generate_validation_summary_with_photos()
+
+                    # Passer en mode attente de confirmation
+                    self.awaiting_photos = False
+                    self.awaiting_confirmation = True
+
+                    return {
+                        "response": validation_summary,
+                        "language": language,
+                        "conversation_type": self.conversation_type,
+                        "sav_ticket": {
+                            "validation_pending": True,
+                            "validation_data": self.pending_ticket_validation,
+                            "photos_count": len(self.pending_photos)
+                        }
+                    }
+
+            # 🎯 NOUVEAU: Si on attend des photos mais qu'on n'en reçoit pas, rappeler au client
+            if self.awaiting_photos and (not photos or len(photos) == 0):
+                if not self.photo_request_sent:
+                    # Première fois qu'on demande les photos
+                    self.photo_request_sent = True
+                    photo_request = """
+📸 **PHOTOS REQUISES**
+
+Pour traiter votre demande SAV, j'ai besoin que vous uploadiez des photos du problème.
+
+Cliquez sur l'icône 📎 ou 📷 pour ajouter vos photos, puis envoyez-les.
+
+**Photos recommandées** :
+• Vue d'ensemble du produit
+• Zoom sur le problème
+• Différents angles si nécessaire
+
+Une fois les photos uploadées, je vous enverrai un récapitulatif complet à valider.
+"""
+                    return {
+                        "response": photo_request,
+                        "language": language,
+                        "conversation_type": self.conversation_type,
+                        "sav_ticket": {
+                            "awaiting_photos": True,
+                            "validation_data": self.pending_ticket_validation
+                        }
+                    }
+                else:
+                    # On a déjà demandé, rappel plus court
+                    reminder = "📸 En attente de vos photos. Cliquez sur 📎 pour les ajouter."
+                    return {
+                        "response": reminder,
+                        "language": language,
+                        "conversation_type": self.conversation_type,
+                        "sav_ticket": {
+                            "awaiting_photos": True
+                        }
+                    }
+
             # Construction du contexte
             context = ""
             if self.client_data:
@@ -478,11 +422,18 @@ Utilise ces informations pour des réponses précises et personnalisées.
 Utilise ces infos pour réponse rapide et pertinente.
 """
 
-            # Ajouter le contexte du catalogue produits
-            catalog_context = "\n\n" + product_catalog.get_catalog_summary_for_ai()
+            # Ajouter le contexte du catalogue produits SEULEMENT si conversation shopping
+            # Pour SAV, pas besoin du catalogue complet → économie de ~1000 tokens
+            if self.conversation_type == "shopping":
+                catalog_context = "\n\n" + product_catalog.get_catalog_summary_for_ai()
+            else:
+                catalog_context = ""  # Pas de catalogue pour SAV = économie de tokens
 
-            # Ajouter le contexte SAV dynamique basé sur le message
-            sav_context = "\n\n" + sav_kb.get_sav_context_for_chatbot(user_message)
+            # Ajouter le contexte SAV dynamique seulement si conversation SAV
+            if self.conversation_type == "sav":
+                sav_context = "\n\n" + sav_kb.get_sav_context_for_chatbot(user_message)
+            else:
+                sav_context = ""
 
             # Préparer les messages pour OpenAI
             full_system_prompt = self.create_system_prompt(language) + context + catalog_context + sav_context
@@ -490,14 +441,16 @@ Utilise ces infos pour réponse rapide et pertinente.
             messages = [
                 {"role": "system", "content": full_system_prompt}
             ]
-            messages.extend(self.conversation_history)
+            # Limiter l'historique pour réduire les coûts (configuration depuis constants.py)
+            recent_history = self.conversation_history[-CONVERSATION_HISTORY_LIMIT:] if len(self.conversation_history) > CONVERSATION_HISTORY_LIMIT else self.conversation_history
+            messages.extend(recent_history)
 
-            # Appel OpenAI API
-            response = self.client.chat.completions.create(
-                model="gpt-4",
+            # Appel OpenAI API - Async, non-bloquant, avec timeout et retry
+            response = await self.client.chat.completions.create(
+                model=OPENAI_MODEL,  # Configuration centralisée dans constants.py
                 messages=messages,
-                max_tokens=1000,
-                temperature=0.7
+                max_tokens=OPENAI_MAX_TOKENS,  # Configuration centralisée
+                temperature=OPENAI_TEMPERATURE  # Configuration centralisée
             )
 
             assistant_message = response.choices[0].message.content
@@ -763,51 +716,20 @@ Utilise ces infos pour réponse rapide et pertinente.
         return slas.get(priority, 168)
 
     def is_user_confirming(self, message: str) -> bool:
-        """
-        Vérifie si le message du client est une confirmation (OUI/YES/CONFIRMER)
-        """
-        message_lower = message.lower().strip()
-        confirmation_keywords = [
-            "oui", "yes", "ok", "d'accord", "confirme", "confirmer",
-            "valider", "valide", "exact", "correct", "c'est bon",
-            "je confirme", "tout est bon", "parfait"
-        ]
-        return any(keyword in message_lower for keyword in confirmation_keywords)
+        """Vérifie si le message du client est une confirmation (OUI/YES/CONFIRMER)"""
+        return is_confirmation(message)
 
     def is_user_rejecting(self, message: str) -> bool:
-        """
-        Vérifie si le message du client est un refus (NON/NO)
-        """
-        message_lower = message.lower().strip()
-        rejection_keywords = [
-            "non", "no", "pas correct", "erreur", "faux", "incorrect",
-            "modifier", "changer", "corriger"
-        ]
-        return any(keyword in message_lower for keyword in rejection_keywords)
+        """Vérifie si le message du client est un refus (NON/NO)"""
+        return is_rejection(message)
 
     def is_user_wanting_to_continue(self, message: str) -> bool:
-        """
-        Vérifie si le client veut continuer la conversation
-        """
-        message_lower = message.lower().strip()
-        continue_keywords = [
-            "continuer", "poursuivre", "oui", "yes", "encore",
-            "autre chose", "j'ai une autre question", "je voudrais",
-            "continue", "carry on"
-        ]
-        return any(keyword in message_lower for keyword in continue_keywords)
+        """Vérifie si le client veut continuer la conversation"""
+        return is_continue_request(message)
 
     def is_user_wanting_to_close(self, message: str) -> bool:
-        """
-        Vérifie si le client veut clôturer la conversation
-        """
-        message_lower = message.lower().strip()
-        close_keywords = [
-            "clôturer", "cloturer", "fermer", "terminer", "fin",
-            "arrêter", "arreter", "non merci", "c'est tout",
-            "merci au revoir", "bye", "close", "end", "stop"
-        ]
-        return any(keyword in message_lower for keyword in close_keywords)
+        """Vérifie si le client veut clôturer la conversation"""
+        return is_close_request(message)
 
     async def prepare_ticket_validation(
         self,
@@ -901,15 +823,74 @@ Utilise ces infos pour réponse rapide et pertinente.
                 "delivery_date": delivery_date
             }
 
-            self.awaiting_confirmation = True
+            # 📸 NOUVEAU: Demander les photos AVANT la validation
+            self.awaiting_photos = True
+            self.awaiting_confirmation = False  # Pas encore de confirmation, d'abord les photos
 
-            logger.info(f"✅ Validation préparée: {priority_result.priority} | {problem_result.primary_category}")
+            logger.info(f"✅ Données préparées: {priority_result.priority} | {problem_result.primary_category} - En attente de photos")
 
             return self.pending_ticket_validation
 
         except Exception as e:
             logger.error(f"❌ Erreur préparation validation: {str(e)}")
             raise
+
+    def generate_validation_summary_with_photos(self) -> str:
+        """
+        Génère un récapitulatif détaillé avec les photos pour validation client
+
+        Returns:
+            Texte du récapitulatif formaté
+        """
+        if not self.pending_ticket_validation:
+            return ""
+
+        data = self.pending_ticket_validation
+        photos_count = len(self.pending_photos)
+
+        # Emoji de priorité - configuration centralisée
+        priority_emoji = get_priority_emoji(data.get("priority", "P2"))
+
+        summary = f"""
+╔════════════════════════════════════════════════╗
+    📋 RÉCAPITULATIF DE VOTRE DEMANDE SAV
+╚════════════════════════════════════════════════╝
+
+🎫 **Numéro de commande**: {data.get('order_number')}
+👤 **Client**: {data.get('customer_name')}
+🛋️ **Produit**: {data.get('product_name')}
+
+⚠️ **Problème signalé**:
+{data.get('problem_description')}
+
+📸 **Photos fournies**: {photos_count} photo(s)
+"""
+
+        # Ajouter liste des photos si présentes
+        if self.pending_photos:
+            summary += "\n📷 **Liste des photos**:\n"
+            for i, photo_url in enumerate(self.pending_photos, 1):
+                summary += f"   {i}. {photo_url.split('/')[-1]}\n"
+
+        summary += f"""
+🛡️ **Garantie**: {'✅ Couvert' if data.get('warranty_covered') else '❌ Non couvert'}
+   └─ Composant: {data.get('warranty_component', 'N/A')}
+
+{priority_emoji} **Priorité**: {data.get('priority')} - {data.get('priority_explanation', '')}
+
+───────────────────────────────────────────────
+
+⚠️ **VALIDATION OBLIGATOIRE**
+
+Pour que votre demande soit prise en compte, vous devez confirmer que toutes ces informations sont correctes.
+
+👉 **Répondez "OUI" pour confirmer et créer votre ticket SAV**
+👉 **Répondez "NON" pour annuler**
+
+Sans validation, aucune action ne sera entreprise.
+"""
+
+        return summary
 
     async def create_ticket_after_validation(self) -> Dict:
         """
@@ -968,6 +949,24 @@ Utilise ces infos pour réponse rapide et pertinente.
                 "problem_description": data["problem_description"]
             }
 
+            # 📸 Ajouter les photos uploadées comme evidences
+            if self.pending_photos and len(self.pending_photos) > 0:
+                logger.info(f"📸 Ajout de {len(self.pending_photos)} photo(s) au ticket {ticket.ticket_id}")
+                for photo_url in self.pending_photos:
+                    try:
+                        sav_workflow_engine.add_evidence(
+                            ticket_id=ticket.ticket_id,
+                            evidence_type="photo",
+                            evidence_url=photo_url,
+                            description="Photo uploadée par le client"
+                        )
+                        logger.info(f"✅ Photo ajoutée: {photo_url}")
+                    except Exception as e:
+                        logger.error(f"❌ Erreur ajout photo: {str(e)}")
+
+                # Réinitialiser les photos après ajout
+                self.pending_photos = []
+
             # Réinitialiser l'état de validation
             self.pending_ticket_validation = None
             self.awaiting_confirmation = False
@@ -995,9 +994,12 @@ Utilise ces infos pour réponse rapide et pertinente.
         self.ticket_data = {}
         self.pending_ticket_validation = None
         self.awaiting_confirmation = False
+        self.awaiting_photos = False
+        self.photo_request_sent = False
         self.should_ask_continue = False
         self.awaiting_continue_or_close = False
         self.conversation_type = "general"
+        self.pending_photos = []  # Réinitialiser les photos
 
     def generate_summary(self) -> str:
         """Génère le bilan de conversation"""
@@ -1045,7 +1047,7 @@ PROCHAINES ÉTAPES:
 {self._generate_next_steps()}
 ───────────────────────────────────────────────────────
 
-Généré automatiquement par Chatbot Meuble de France
+Généré automatiquement par Chatbot Mobilier de France
 ═══════════════════════════════════════════════════════
 """
         return summary

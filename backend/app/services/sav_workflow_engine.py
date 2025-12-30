@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 
+from app.core.constants import PRIORITY_SLA_TIMES
 from app.services.warranty_service import warranty_service
 from app.services.problem_detector import problem_detector
 from app.services.priority_scorer import priority_scorer
@@ -414,14 +415,8 @@ class SAVWorkflowEngine:
     def _set_sla_deadlines(self, ticket: SAVTicket) -> SAVTicket:
         """Définit les deadlines SLA selon la priorité"""
 
-        sla_times = {
-            "P0": {"response_hours": 4, "intervention_hours": 24},
-            "P1": {"response_hours": 24, "intervention_hours": 48},
-            "P2": {"response_hours": 120, "intervention_hours": 168},
-            "P3": {"response_hours": 168, "intervention_hours": 336}
-        }
-
-        times = sla_times.get(ticket.priority, sla_times["P3"])
+        # Use centralized SLA times from constants.py
+        times = PRIORITY_SLA_TIMES.get(ticket.priority, PRIORITY_SLA_TIMES["P3"])
 
         ticket.sla_response_deadline = ticket.created_at + timedelta(hours=times["response_hours"])
         ticket.sla_intervention_deadline = ticket.created_at + timedelta(hours=times["intervention_hours"])

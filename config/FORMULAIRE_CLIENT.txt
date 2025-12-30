@@ -1,0 +1,220 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# 📋 FORMULAIRE DE CONFIGURATION CHATBOT SAV
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# INSTRUCTIONS POUR LE CLIENT:
+# 1. Remplissez les champs ci-dessous avec vos préférences
+# 2. Envoyez ce fichier à votre développeur
+# 3. Il générera la configuration automatiquement
+#
+# ⚠️ IMPORTANT: Répondez à toutes les questions marquées [OBLIGATOIRE]
+# Les questions [OPTIONNEL] peuvent rester vides
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🏢 SECTION 1: INFORMATIONS ENTREPRISE
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Nom complet de votre entreprise
+ENTREPRISE_NOM = Mobilier de France
+
+# [OBLIGATOIRE] Nom court (sigle, max 5 lettres)
+ENTREPRISE_SIGLE = MDF
+
+# [OBLIGATOIRE] Email du service SAV
+ENTREPRISE_EMAIL_SAV = sav@mobilierdefrance.fr
+
+# [OPTIONNEL] Numéro de téléphone SAV
+ENTREPRISE_TELEPHONE = +33 1 23 45 67 89
+
+# [OPTIONNEL] Site web
+ENTREPRISE_SITE_WEB = https://www.mobilierdefrance.fr
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎨 SECTION 2: COULEURS & BRANDING
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Couleur principale (format: #RRGGBB)
+# Exemples: #DC2626 (rouge), #0066CC (bleu), #10B981 (vert)
+COULEUR_PRINCIPALE = #DC2626
+
+# [OPTIONNEL] Couleur secondaire
+COULEUR_SECONDAIRE = #F97316
+
+# [OPTIONNEL] Couleur d'accent
+COULEUR_ACCENT = #3B82F6
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 💬 SECTION 3: MESSAGE D'ACCUEIL
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Message d'accueil en français (max 3 lignes)
+MESSAGE_ACCUEIL_FR = Bonjour ! Je suis votre assistant SAV Mobilier de France. Décrivez-moi votre problème avec votre numéro de commande, je m'occupe du reste !
+
+# [OPTIONNEL] Message d'accueil en anglais
+MESSAGE_ACCUEIL_EN = Hello! I am your Mobilier de France customer support assistant. Describe your problem with your order number, I'll take care of the rest!
+
+# [OPTIONNEL] Message d'accueil en arabe
+MESSAGE_ACCUEIL_AR = مرحباً! أنا مساعد خدمة العملاء لشركة Mobilier de France. صف لي مشكلتك مع رقم طلبك، وسأتولى الأمر!
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🧠 SECTION 4: INTELLIGENCE ARTIFICIELLE
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Modèle IA à utiliser
+# Choisissez: gpt-3.5-turbo (économique) OU gpt-4 (performant mais cher)
+MODELE_IA = gpt-3.5-turbo
+
+# [OBLIGATOIRE] Budget mensuel IA estimé
+# Choisissez: faible (< 50€) | moyen (50-200€) | élevé (> 200€)
+BUDGET_IA = faible
+
+# [OPTIONNEL] Longueur des réponses
+# Choisissez: courte (300 mots) | moyenne (500 mots) | longue (800 mots)
+LONGUEUR_REPONSES = courte
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎯 SECTION 5: PRIORITÉS ET SLA (Délais de Réponse)
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Délai de réponse pour tickets CRITIQUES (P0) en heures
+# Exemples: 1, 2, 4, 8
+SLA_P0_HEURES = 4
+
+# [OBLIGATOIRE] Délai de réponse pour tickets URGENTS (P1) en heures
+# Exemples: 12, 24, 48
+SLA_P1_HEURES = 24
+
+# [OBLIGATOIRE] Délai de réponse pour tickets NORMAUX (P2) en heures
+# Exemples: 24, 48, 72
+SLA_P2_HEURES = 48
+
+# [OBLIGATOIRE] Délai de réponse pour tickets FAIBLES (P3) en heures
+# Exemples: 48, 72, 168 (1 semaine)
+SLA_P3_HEURES = 72
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🛡️ SECTION 6: GARANTIES
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Durée garantie STRUCTURE (pieds, cadre) en années
+GARANTIE_STRUCTURE_ANNEES = 5
+
+# [OBLIGATOIRE] Durée garantie TISSU (revêtement) en années
+GARANTIE_TISSU_ANNEES = 2
+
+# [OBLIGATOIRE] Durée garantie MÉCANISMES (canapé-lit, relax) en années
+GARANTIE_MECANISMES_ANNEES = 3
+
+# [OBLIGATOIRE] Durée garantie COUSSINS (garnissage) en années
+GARANTIE_COUSSINS_ANNEES = 2
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📤 SECTION 7: UPLOAD DE FICHIERS
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Taille maximale par fichier en MB
+# Exemples: 5, 10, 20, 50
+TAILLE_MAX_FICHIER_MB = 10
+
+# [OBLIGATOIRE] Nombre maximum de fichiers par demande
+# Exemples: 5, 10, 20
+NOMBRE_MAX_FICHIERS = 10
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔔 SECTION 8: NOTIFICATIONS
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Envoyer email au client après création de ticket ?
+# Choisissez: oui OU non
+NOTIFICATION_EMAIL = oui
+
+# [OPTIONNEL] Envoyer SMS pour tickets urgents (P0, P1) ?
+# Choisissez: oui OU non
+NOTIFICATION_SMS = non
+
+# [OPTIONNEL] Email de l'équipe SAV (pour notifications internes)
+EMAIL_EQUIPE_SAV = equipe-sav@mobilierdefrance.fr
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 📊 SECTION 9: TABLEAU DE BORD
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OBLIGATOIRE] Titre du tableau de bord
+DASHBOARD_TITRE = Tableau de Bord SAV
+
+# [OPTIONNEL] Sous-titre
+DASHBOARD_SOUS_TITRE = Gestion centralisée des réclamations clients
+
+# [OBLIGATOIRE] Colonnes à afficher dans le tableau
+# Séparez par des virgules. Choisissez parmi:
+# ticket_id, customer, problem, priority, tone, status, date, order_number, product, warranty
+# Exemple: ticket_id,customer,problem,priority,status,date
+DASHBOARD_COLONNES = ticket_id,customer,problem,priority,tone,status,date
+
+# [OPTIONNEL] Activer export de données (CSV, Excel) ?
+# Choisissez: oui OU non
+DASHBOARD_EXPORT = non
+
+# [OPTIONNEL] Rafraîchissement automatique du tableau (en secondes)
+# Exemples: 10, 30, 60
+DASHBOARD_REFRESH_SECONDES = 30
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🎤 SECTION 10: FONCTIONNALITÉS VOIX
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OPTIONNEL] Activer la synthèse vocale (le bot parle) ?
+# Choisissez: oui OU non
+VOIX_SYNTHESE = oui
+
+# [OPTIONNEL] Activer la reconnaissance vocale (le client parle) ?
+# Choisissez: oui OU non
+VOIX_RECONNAISSANCE = oui
+
+# [OPTIONNEL] Langue par défaut pour la voix
+# Choisissez: fr-FR | en-US | ar-SA
+VOIX_LANGUE = fr-FR
+
+# ───────────────────────────────────────────────────────────────────────────────
+# 🔍 SECTION 11: MOTS-CLÉS PERSONNALISÉS (OPTIONNEL)
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OPTIONNEL] Mots-clés supplémentaires pour détecter une demande SAV
+# Séparez par des virgules
+# Exemples: réclamation,insatisfait,remboursement
+MOTS_CLES_SAV_SUPPLEMENTAIRES = réclamation,insatisfait,remboursement
+
+# [OPTIONNEL] Mots-clés supplémentaires pour détecter une demande shopping
+# Séparez par des virgules
+# Exemples: devis,catalogue,promotion
+MOTS_CLES_SHOPPING_SUPPLEMENTAIRES = devis,catalogue,promotion
+
+# ───────────────────────────────────────────────────────────────────────────────
+# ⏱️ SECTION 12: CONFIGURATION AVANCÉE (OPTIONNEL)
+# ───────────────────────────────────────────────────────────────────────────────
+
+# [OPTIONNEL] Type de service souhaité
+# Choisissez: startup | standard | premium | luxe
+TYPE_SERVICE = standard
+
+# [OPTIONNEL] Support multilingue actif ?
+# Choisissez: oui OU non
+SUPPORT_MULTILINGUE = non
+
+# [OPTIONNEL] Mode d'économie activé (réduit les coûts IA) ?
+# Choisissez: oui OU non
+MODE_ECONOMIE = oui
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FIN DU FORMULAIRE
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# ✅ ÉTAPES SUIVANTES:
+# 1. Sauvegardez ce fichier
+# 2. Envoyez-le à votre développeur
+# 3. Il générera la configuration automatiquement
+# 4. Vous recevrez le chatbot configuré selon vos préférences !
+#
+# Questions ? Contactez votre développeur.
+# ═══════════════════════════════════════════════════════════════════════════════
