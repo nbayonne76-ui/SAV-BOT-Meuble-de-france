@@ -2,11 +2,10 @@
 """
 Main FastAPI application with security features enabled
 """
-from fastapi import FastAPI, Request, File, UploadFile
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
-from typing import List
 import uvicorn
 import logging
 from pathlib import Path
@@ -123,15 +122,6 @@ app.add_middleware(
     max_age=600  # Cache preflight for 10 minutes
 )
 
-# Fix for 307 redirect issue - handle /api/upload without trailing slash
-# IMPORTANT: This must be defined BEFORE including the upload router
-# This route forwards to the upload handler to avoid redirect that loses POST data
-@app.post("/api/upload", include_in_schema=False)
-async def upload_no_slash_redirect(files: List[UploadFile] = File(...)):
-    """Direct handler for /api/upload (without trailing slash) to avoid 307 redirect"""
-    from app.api.endpoints.upload import _upload_files_handler
-    return await _upload_files_handler(files)
-
 # Mount uploads directory
 uploads_path = Path(settings.UPLOAD_DIR)
 if uploads_path.exists():
@@ -143,8 +133,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 
 # Protected endpoints
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
-# Upload router removed - using direct route above to avoid 307 redirect
-# app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
+# Upload router now works correctly with redirect_slashes=False
+app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(products.router, prefix="/api/products", tags=["Products"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["Tickets"])
 app.include_router(faq.router, prefix="/api/faq", tags=["FAQ"])
