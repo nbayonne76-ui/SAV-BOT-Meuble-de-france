@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.services.cloudinary_storage import CloudinaryService
 
 logger = logging.getLogger(__name__)
-router = APIRouter()
+router = APIRouter(redirect_slashes=False)
 
 # Initialize Cloudinary
 CloudinaryService.initialize()
