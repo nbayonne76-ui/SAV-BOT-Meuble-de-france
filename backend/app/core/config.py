@@ -88,6 +88,18 @@ class Settings:
         )
 
         # ===================
+        # Cloudinary Settings
+        # ===================
+        self.CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")
+        self.CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
+        self.CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
+        self.USE_CLOUDINARY = bool(
+            self.CLOUDINARY_CLOUD_NAME and
+            self.CLOUDINARY_API_KEY and
+            self.CLOUDINARY_API_SECRET
+        )
+
+        # ===================
         # CORS Settings
         # ===================
         self.CORS_ORIGINS = os.getenv(

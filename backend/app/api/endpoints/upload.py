@@ -6,12 +6,18 @@ import aiofiles
 import os
 from pathlib import Path
 from datetime import datetime
+import tempfile
+
 from app.core.config import settings
+from app.services.cloudinary_storage import CloudinaryService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Create upload directories
+# Initialize Cloudinary
+CloudinaryService.initialize()
+
+# Create upload directories (fallback for local development)
 UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 PHOTOS_DIR = UPLOAD_DIR / "photos"
 VIDEOS_DIR = UPLOAD_DIR / "videos"
@@ -34,7 +40,7 @@ def get_file_directory(filename: str) -> Path:
 @router.post("/", status_code=status.HTTP_200_OK)
 async def upload_files(files: List[UploadFile] = File(...)):
     """
-    Upload photos or videos
+    Upload photos or videos to Cloudinary (production) or local storage (development)
     """
     try:
         logger.info(f"Upload request received: {len(files)} file(s)")
@@ -69,22 +75,58 @@ async def upload_files(files: List[UploadFile] = File(...)):
             extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
             new_filename = f"{timestamp}_{file.filename}"
 
-            # Save file
-            file_dir = get_file_directory(file.filename)
-            file_path = file_dir / new_filename
+            # Upload to Cloudinary if configured, otherwise use local storage
+            if settings.USE_CLOUDINARY:
+                # Save to temporary file first
+                with tempfile.NamedTemporaryFile(delete=False, suffix=f".{extension}") as tmp_file:
+                    tmp_file.write(content)
+                    tmp_path = tmp_file.name
 
-            async with aiofiles.open(file_path, 'wb') as f:
-                await f.write(content)
+                try:
+                    # Upload to Cloudinary
+                    resource_type = "video" if extension in ['mp4', 'mov', 'avi', 'webm'] else "image"
+                    result = await CloudinaryService.upload_file(
+                        tmp_path,
+                        folder="sav-uploads",
+                        resource_type=resource_type
+                    )
 
-            logger.info(f"File saved: {file_path}")
+                    logger.info(f"File uploaded to Cloudinary: {result['public_id']}")
 
-            uploaded_files.append({
-                "original_name": file.filename,
-                "saved_name": new_filename,
-                "url": f"/uploads/{file_dir.name}/{new_filename}",
-                "size": len(content),
-                "type": extension
-            })
+                    uploaded_files.append({
+                        "original_name": file.filename,
+                        "saved_name": result['public_id'],
+                        "url": result['url'],
+                        "size": len(content),
+                        "type": extension,
+                        "storage": "cloudinary"
+                    })
+
+                finally:
+                    # Clean up temp file
+                    try:
+                        os.unlink(tmp_path)
+                    except:
+                        pass
+
+            else:
+                # Local storage fallback (development)
+                file_dir = get_file_directory(file.filename)
+                file_path = file_dir / new_filename
+
+                async with aiofiles.open(file_path, 'wb') as f:
+                    await f.write(content)
+
+                logger.info(f"File saved locally: {file_path}")
+
+                uploaded_files.append({
+                    "original_name": file.filename,
+                    "saved_name": new_filename,
+                    "url": f"/uploads/{file_dir.name}/{new_filename}",
+                    "size": len(content),
+                    "type": extension,
+                    "storage": "local"
+                })
 
         return {
             "success": True,
