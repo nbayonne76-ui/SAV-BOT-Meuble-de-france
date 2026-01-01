@@ -142,7 +142,8 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 
 # Protected endpoints
 app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
-app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
+# Upload router removed - using direct route above to avoid 307 redirect
+# app.include_router(upload.router, prefix="/api/upload", tags=["Upload"])
 app.include_router(products.router, prefix="/api/products", tags=["Products"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["Tickets"])
 app.include_router(faq.router, prefix="/api/faq", tags=["FAQ"])
