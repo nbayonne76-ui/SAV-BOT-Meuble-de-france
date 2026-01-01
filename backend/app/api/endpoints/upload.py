@@ -37,8 +37,8 @@ def get_file_directory(filename: str) -> Path:
         return VIDEOS_DIR
     return PHOTOS_DIR
 
-@router.post("/", status_code=status.HTTP_200_OK)
-async def upload_files(files: List[UploadFile] = File(...)):
+# Upload handler (shared between routes with and without trailing slash)
+async def _upload_files_handler(files: List[UploadFile]):
     """
     Upload photos or videos to Cloudinary (production) or local storage (development)
     """
@@ -142,6 +142,18 @@ async def upload_files(files: List[UploadFile] = File(...)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de l'upload: {str(e)}"
         )
+
+# Route with trailing slash
+@router.post("/", status_code=status.HTTP_200_OK)
+async def upload_files_with_slash(files: List[UploadFile] = File(...)):
+    """Upload files (with trailing slash)"""
+    return await _upload_files_handler(files)
+
+# Route without trailing slash (fixes 307 redirect issue)
+@router.post("", status_code=status.HTTP_200_OK)
+async def upload_files_without_slash(files: List[UploadFile] = File(...)):
+    """Upload files (without trailing slash)"""
+    return await _upload_files_handler(files)
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
 async def get_upload_stats():
