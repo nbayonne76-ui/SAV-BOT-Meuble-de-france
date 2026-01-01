@@ -2,10 +2,11 @@
 """
 Main FastAPI application with security features enabled
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
+from typing import List
 import uvicorn
 import logging
 from pathlib import Path
@@ -137,6 +138,15 @@ app.include_router(products.router, prefix="/api/products", tags=["Products"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["Tickets"])
 app.include_router(faq.router, prefix="/api/faq", tags=["FAQ"])
 app.include_router(sav.router, prefix="/api", tags=["SAV"])
+
+
+# Fix for 307 redirect issue - handle /api/upload without trailing slash
+# This route forwards to the upload handler to avoid redirect that loses POST data
+@app.post("/api/upload", include_in_schema=False)
+async def upload_no_slash_redirect(files: List[UploadFile] = File(...)):
+    """Direct handler for /api/upload (without trailing slash) to avoid 307 redirect"""
+    from app.api.endpoints.upload import _upload_files_handler
+    return await _upload_files_handler(files)
 
 
 @app.get("/", tags=["Root"])
