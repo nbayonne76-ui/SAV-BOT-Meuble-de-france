@@ -430,7 +430,7 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
     validFiles.forEach(file => formData.append('files', file));
 
     try {
-      const response = await fetch(`${API_URL}/api/upload`, {
+      const response = await fetch(`${API_URL}/api/upload/`, {
         method: 'POST',
         body: formData
       });
