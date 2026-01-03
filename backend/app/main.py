@@ -17,7 +17,7 @@ from app.core.middleware import setup_security_middleware
 from app.core.rate_limit import setup_rate_limiter
 from app.core.redis import CacheManager
 from app.db.session import init_db, close_db
-from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth
+from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
 
 # Setup logging
@@ -139,6 +139,10 @@ app.include_router(products.router, prefix="/api/products", tags=["Products"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["Tickets"])
 app.include_router(faq.router, prefix="/api/faq", tags=["FAQ"])
 app.include_router(sav.router, prefix="/api", tags=["SAV"])
+# Voice mode endpoints
+app.include_router(voice.router, prefix="/api/voice", tags=["Voice"])
+app.include_router(realtime.router, prefix="/api/realtime", tags=["Realtime"])
+app.include_router(realtime_ws.router, prefix="/api/realtime-ws", tags=["Realtime WebSocket"])
 
 
 @app.get("/", tags=["Root"])

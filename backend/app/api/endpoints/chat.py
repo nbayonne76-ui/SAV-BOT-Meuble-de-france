@@ -32,7 +32,7 @@ chatbot_instances = {}
 
 class ChatRequest(BaseModel):
     """Chat request with validation"""
-    message: str = Field(..., min_length=1, max_length=4000)
+    message: str = Field("", max_length=4000)  # Allow empty message if photos present
     session_id: Optional[str] = Field("default", max_length=100)
     order_number: Optional[str] = Field(None, max_length=50)
     photos: Optional[List[str]] = Field(default_factory=list)
@@ -40,8 +40,9 @@ class ChatRequest(BaseModel):
     @validator('message')
     def sanitize_message(cls, v):
         """Sanitize message input"""
+        # Allow empty message if user is sending photos only
         if not v or not v.strip():
-            raise ValueError('Message cannot be empty')
+            return ""  # Return empty string for photo-only messages
         # Remove null bytes
         v = v.replace('\x00', '')
         # Limit consecutive newlines

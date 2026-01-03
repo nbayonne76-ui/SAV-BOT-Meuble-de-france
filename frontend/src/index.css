@@ -9,27 +9,33 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  /* Police Segoe UI Variable Display Semib en priorité */
+  font-family: 'Segoe UI Variable Display Semib', 'Segoe UI', -apple-system, BlinkMacSystemFont,
+    'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Couleurs de branding */
+  background-color: #20253F; /* Fond bleu RVB(32, 37, 63) */
+  color: #FFFFFF; /* Texte blanc RVB(255, 255, 255) */
 }
 
+/* Scrollbar personnalisée avec le thème bleu */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: #2A2F4A; /* Variante du bleu de fond */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #888;
+  background: #3A3F5A; /* Bleu plus clair */
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #4A4F6A; /* Bleu encore plus clair au hover */
 }
 
 @keyframes fadeIn {
@@ -58,4 +64,11 @@ body {
 
 .animate-bounce-custom {
   animation: bounce 1s ease-in-out infinite;
+}
+
+/* Styles supplémentaires pour Segoe UI Variable Display */
+@supports (font-variation-settings: normal) {
+  body {
+    font-variation-settings: 'wght' 600; /* Semi-bold weight */
+  }
 }

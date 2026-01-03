@@ -69,3 +69,14 @@ coverage/
 # Test artifacts
 backend/tests/__pycache__/
 backend/tests/.pytest_cache/
+
+# Uploads
+backend/uploads/
+uploads/
+
+# Vite cache
+.vite/
+*/.vite/
+
+# Test files
+test_ticket*.json

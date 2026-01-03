@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Camera, X, Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -23,32 +23,15 @@ const ChatInterface = () => {
 
   // Message d'accueil
   useEffect(() => {
-    const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Meuble de France 🛠️
+    const welcomeMessage = `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
+Nous sommes à votre écoute pour un accompagnement personnalisé.
 
-Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votre réclamation.
+Pour vous aider rapidement, donnez-moi :
+• Votre nom
+• Votre numéro de commande
+• Une description de votre problème
 
-🎯 **Je vais vous aider à :**
-• Analyser votre problème automatiquement
-• Vérifier votre garantie instantanément
-• Collecter les preuves nécessaires (photos/vidéos)
-• Créer votre ticket SAV en quelques secondes
-• Calculer la priorité et le délai de traitement
-
-📋 **Pour commencer, veuillez me fournir :**
-1. **Votre nom complet**
-2. **Votre numéro de commande**
-3. **La description détaillée de votre problème**
-4. **Des photos du problème** (si possible)
-
-**Exemple :**
-"Bonjour, je m'appelle Jean Dupont. Mon canapé OSLO a un pied cassé, c'est dangereux pour mon enfant! Numéro de commande: CMD-2024-12345"
-
-🎤 **Nouveauté : Communication vocale bidirectionnelle !**
-• Parlez avec le bouton microphone 🎤
-• J'écouterai votre problème
-• Je vous répondrai avec ma voix 🔊
-
-**Je m'occupe du reste automatiquement ! Présentez-vous et expliquez votre problème :**`;
+Vous pouvez écrire ou utiliser le microphone 🎤`;
 
     setMessages([{
       role: 'assistant',
@@ -59,7 +42,7 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
     // 🔊 Parler le message d'accueil après 1 seconde
     setTimeout(() => {
       if (isSpeechEnabled) {
-        const shortWelcome = "Bonjour ! Bienvenue au Service Après-Vente de Meuble de France. Je suis votre assistant SAV intelligent. Pour commencer, veuillez me fournir votre nom complet, votre numéro de commande, et la description détaillée de votre problème. Vous pouvez aussi utiliser le bouton microphone pour me parler directement.";
+        const shortWelcome = "Bonjour et bienvenue au service clientèle du groupe Mobilier de France. Nous sommes à votre écoute pour un accompagnement personnalisé. Pour vous aider rapidement, donnez-moi votre nom, votre numéro de commande, et une description de votre problème.";
         speakText(shortWelcome);
       }
     }, 1000);
@@ -334,32 +317,15 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
           // Réafficher le message d'accueil après 500ms
           setTimeout(() => {
-            const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Meuble de France 🛠️
+            const welcomeMessage = `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
+Nous sommes à votre écoute pour un accompagnement personnalisé.
 
-Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votre réclamation.
+Pour vous aider rapidement, donnez-moi :
+• Votre nom
+• Votre numéro de commande
+• Une description de votre problème
 
-🎯 **Je vais vous aider à :**
-• Analyser votre problème automatiquement
-• Vérifier votre garantie instantanément
-• Collecter les preuves nécessaires (photos/vidéos)
-• Créer votre ticket SAV en quelques secondes
-• Calculer la priorité et le délai de traitement
-
-📋 **Pour commencer, veuillez me fournir :**
-1. **Votre nom complet**
-2. **Votre numéro de commande**
-3. **La description détaillée de votre problème**
-4. **Des photos du problème** (si possible)
-
-**Exemple :**
-"Bonjour, je m'appelle Jean Dupont. Mon canapé OSLO a un pied cassé, c'est dangereux pour mon enfant! Numéro de commande: CMD-2024-12345"
-
-🎤 **Nouveauté : Communication vocale bidirectionnelle !**
-• Parlez avec le bouton microphone 🎤
-• J'écouterai votre problème
-• Je vous répondrai avec ma voix 🔊
-
-**Je m'occupe du reste automatiquement ! Présentez-vous et expliquez votre problème :**`;
+Vous pouvez écrire ou utiliser le microphone 🎤`;
 
             setMessages([{
               role: 'assistant',
@@ -513,13 +479,13 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
   };
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto bg-gradient-to-br from-amber-50 to-orange-50">
+    <div className="flex flex-col h-full max-w-5xl mx-auto" style={{background: 'linear-gradient(to bottom right, #20253F, #2C3650)'}}>
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 shadow-lg">
+      <div style={{background: 'linear-gradient(to right, #2C3650, #3A4560)'}} className="text-white p-6 shadow-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">🛠️ Meuble de France - SAV</h1>
-            <p className="text-sm opacity-90 mt-1">Service Après-Vente Intelligent • Traitement automatisé en temps réel</p>
+            <h1 className="text-3xl font-bold">🛠️ Mobilier de France - Accompagnement</h1>
+            <p className="text-sm opacity-90 mt-1">Service d'Accompagnement Intelligent • Traitement automatisé en temps réel</p>
           </div>
 
           {/* 🔊 Contrôle vocal */}
@@ -687,7 +653,7 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
       <div className="bg-white p-6 border-t border-gray-200 shadow-lg">
         {/* 🎤 Recording Indicator - VERSION AMÉLIORÉE */}
         {isRecording && (
-          <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-xl shadow-lg">
+          <div className="mb-4 p-4 border-2 rounded-xl shadow-lg" style={{background: 'linear-gradient(to right, rgba(44, 54, 80, 0.1), rgba(58, 69, 96, 0.1))', borderColor: '#2C3650'}}>
             <div className="flex items-center space-x-3 mb-2">
               <div className="flex space-x-1">
                 <div className="w-2 h-6 bg-red-500 rounded animate-pulse" style={{animationDelay: '0s'}}></div>
@@ -766,11 +732,12 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Nom complet + Problème + N° commande... (Ex: Jean Dupont, mon canapé OSLO a un pied cassé, CMD-2024-12345)"
-              className="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              className="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
               rows="1"
               style={{
                 minHeight: '50px',
-                maxHeight: '150px'
+                maxHeight: '150px',
+                color: '#1F2937'
               }}
             />
           </div>
