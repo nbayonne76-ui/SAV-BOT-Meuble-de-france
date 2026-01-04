@@ -88,10 +88,12 @@ class CloudinaryService:
                 )
             )
 
+            secure_url = result.get("secure_url")
             logger.info(f"File uploaded to Cloudinary: {result.get('public_id')}")
+            logger.info(f"Cloudinary URL: {secure_url}")
 
             return {
-                "url": result.get("secure_url"),
+                "url": secure_url,
                 "public_id": result.get("public_id"),
                 "format": result.get("format"),
                 "resource_type": result.get("resource_type"),
