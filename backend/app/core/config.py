@@ -56,7 +56,16 @@ class Settings:
         # ===================
         # Database Settings
         # ===================
-        self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
+        database_url = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
+
+        # Transform PostgreSQL URLs for SQLAlchemy compatibility
+        # Railway provides postgresql:// but SQLAlchemy needs postgresql+psycopg2://
+        if database_url.startswith("postgresql://"):
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        elif database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+
+        self.DATABASE_URL = database_url
 
         # Warn if using SQLite in non-debug mode
         if not self.DEBUG and self.DATABASE_URL.startswith("sqlite"):
