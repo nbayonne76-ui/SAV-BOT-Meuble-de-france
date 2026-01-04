@@ -9,7 +9,6 @@ from typing import Dict, Any, Optional
 import logging
 import asyncio
 from functools import partial
-from pathlib import Path
 
 from app.core.config import settings
 
@@ -75,7 +74,6 @@ class CloudinaryService:
 
         try:
             # Upload to Cloudinary in a thread pool to avoid blocking
-            # The cloudinary SDK is synchronous, so we run it in a thread
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
                 None,
