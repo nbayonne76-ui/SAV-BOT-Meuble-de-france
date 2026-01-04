@@ -2,7 +2,7 @@
 """
 Service de gestion des garanties
 """
-
+"Abdalla Test"
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
