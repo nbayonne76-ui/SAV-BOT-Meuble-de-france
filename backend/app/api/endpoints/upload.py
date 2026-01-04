@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 import tempfile
-
+from uuid import uuid4
 from app.core.config import settings
 from app.services.cloudinary_storage import CloudinaryService
 
@@ -73,8 +73,8 @@ async def _upload_files_handler(files: List[UploadFile]):
             # Generate unique filename
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'jpg'
-            new_filename = f"{timestamp}_{file.filename}"
-
+            # new_filename = f"{timestamp}_{file.filename}"
+            new_filename = f"{timestamp}_{uuid4().hex}_{file.filename}"
             # Upload to Cloudinary if configured, otherwise use local storage
             if settings.USE_CLOUDINARY:
                 # Save to temporary file first
@@ -114,7 +114,7 @@ async def _upload_files_handler(files: List[UploadFile]):
                 file_dir = get_file_directory(file.filename)
                 file_path = file_dir / new_filename
 
-                async with aiofiles.open(file_path, 'wb') as f:
+                async with aiofiles.open(str(file_path), 'wb') as f:
                     await f.write(content)
 
                 logger.info(f"File saved locally: {file_path}")
@@ -142,6 +142,8 @@ async def _upload_files_handler(files: List[UploadFile]):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur lors de l'upload: {str(e)}"
         )
+    finally:
+        await file.close()
 
 # Route with trailing slash
 @router.post("/", status_code=status.HTTP_200_OK)
