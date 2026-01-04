@@ -28,7 +28,7 @@ class Settings:
         # ===================
         # Core Settings
         # ===================
-        self.APP_NAME = os.getenv("APP_NAME", "Meuble de France Chatbot")
+        self.APP_NAME = os.getenv("APP_NAME", "Mobilier de France Chatbot")
         self.APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
         self.DEBUG = os.getenv("DEBUG", "True").lower() == "true"
         self.HOST = os.getenv("HOST", "0.0.0.0")
@@ -56,7 +56,29 @@ class Settings:
         # ===================
         # Database Settings
         # ===================
-        self.DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
+        database_url = os.getenv("DATABASE_URL")
+
+        # Debug: Check if DATABASE_URL is set
+        if not database_url or database_url.strip() == "":
+            print("[WARNING] DATABASE_URL environment variable is not set or is empty!")
+            if not self.DEBUG:
+                print("[ERROR] DATABASE_URL is required in production!")
+                print("[INFO] Available environment variables:", list(os.environ.keys())[:10])
+            database_url = "sqlite:///./chatbot.db"
+            print(f"[INFO] Falling back to SQLite: {database_url}")
+        else:
+            print(f"[DEBUG] DATABASE_URL found: {database_url[:20]}...")
+
+            # Transform PostgreSQL URLs for SQLAlchemy compatibility
+            # Railway provides postgresql:// but SQLAlchemy needs postgresql+psycopg2://
+            if database_url.startswith("postgresql://"):
+                database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+                print("[INFO] Transformed postgresql:// to postgresql+psycopg2://")
+            elif database_url.startswith("postgres://"):
+                database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+                print("[INFO] Transformed postgres:// to postgresql+psycopg2://")
+
+        self.DATABASE_URL = database_url
 
         # Warn if using SQLite in non-debug mode
         if not self.DEBUG and self.DATABASE_URL.startswith("sqlite"):
@@ -104,7 +126,7 @@ class Settings:
         # ===================
         self.CORS_ORIGINS = os.getenv(
             "CORS_ORIGINS",
-            "http://localhost:5173,http://localhost:3000"
+            "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176"
         )
 
         # ===================

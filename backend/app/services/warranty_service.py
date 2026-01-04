@@ -2,7 +2,6 @@
 """
 Service de gestion des garanties
 """
-
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
@@ -16,7 +15,6 @@ from app.models.warranty import (
 )
 
 logger = logging.getLogger(__name__)
-
 
 class WarrantyService:
     """

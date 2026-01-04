@@ -53,8 +53,12 @@ def init_db():
     Initialize database tables.
     Call this at application startup.
     """
-    from app.models.user import Base
-    Base.metadata.create_all(bind=engine)
+    from app.models.user import Base as UserBase
+    from app.models.ticket import Base as TicketBase
+
+    # Create all tables
+    UserBase.metadata.create_all(bind=engine)
+    TicketBase.metadata.create_all(bind=engine)
 
 
 def close_db():

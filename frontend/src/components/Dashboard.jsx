@@ -1,8 +1,8 @@
 // frontend/src/components/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
-import { FileText, Download, Eye, AlertCircle, Clock, CheckCircle, XCircle, Filter } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Download, Eye, AlertCircle, Clock, CheckCircle, XCircle, Filter, RefreshCw } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const Dashboard = () => {
   const [tickets, setTickets] = useState([]);
@@ -21,17 +21,36 @@ const Dashboard = () => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/api/sav/tickets`);
+      setError(null);
+
+      console.log('🔄 Fetching tickets from:', `${API_URL}/api/sav/tickets`);
+
+      const response = await fetch(`${API_URL}/api/sav/tickets`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('📡 Response status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
       const data = await response.json();
+      console.log('✅ Tickets received:', data);
 
       if (data.success) {
-        setTickets(data.tickets);
+        setTickets(data.tickets || []);
+        setError(null);
       } else {
         setError('Erreur lors du chargement des tickets');
       }
     } catch (err) {
-      console.error('Erreur:', err);
-      setError('Erreur de connexion au serveur');
+      console.error('❌ Error:', err);
+      setError(`Erreur de connexion: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -53,12 +72,9 @@ const Dashboard = () => {
   };
 
   const downloadDossier = (ticket) => {
-    // Télécharger le dossier au format JSON
     const dataStr = JSON.stringify(dossier, null, 2);
     const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-
     const exportFileDefaultName = `dossier_${ticket.ticket_id}.json`;
-
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -120,12 +136,27 @@ const Dashboard = () => {
     return labels[status] || status;
   };
 
+  const formatDate = (dateStr) => {
+    try {
+      return new Date(dateStr).toLocaleString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-red-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Chargement des tickets SAV...</p>
+          <p className="text-gray-600">Chargement des demandes d'accompagnement...</p>
+          <p className="text-xs text-gray-400 mt-2">{API_URL}/api/sav/tickets</p>
         </div>
       </div>
     );
@@ -134,14 +165,20 @@ const Dashboard = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center text-red-600">
-          <XCircle className="w-16 h-16 mx-auto mb-4" />
-          <p className="text-xl font-semibold">{error}</p>
+        <div className="text-center max-w-md">
+          <XCircle className="w-16 h-16 mx-auto mb-4 text-red-600" />
+          <p className="text-xl font-semibold text-red-600 mb-2">Erreur de connexion</p>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <div className="bg-gray-100 p-4 rounded-lg mb-4 text-left">
+            <p className="text-xs text-gray-600 mb-1"><strong>URL API:</strong></p>
+            <p className="text-xs font-mono text-gray-800 break-all">{API_URL}/api/sav/tickets</p>
+          </div>
           <button
             onClick={fetchTickets}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2 mx-auto"
           >
-            Réessayer
+            <RefreshCw className="w-5 h-5" />
+            <span>Réessayer</span>
           </button>
         </div>
       </div>
@@ -152,9 +189,18 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 shadow-lg">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold">📊 Tableau de Bord SAV</h1>
-          <p className="text-sm opacity-90 mt-1">Gestion centralisée des réclamations clients</p>
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold">📊 Tableau de Bord - Accompagnement</h1>
+            <p className="text-sm opacity-90 mt-1">Gestion centralisée des demandes de la clientèle groupe Mobilier de France</p>
+          </div>
+          <button
+            onClick={fetchTickets}
+            className="flex items-center space-x-2 px-4 py-2 bg-white text-red-600 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Actualiser</span>
+          </button>
         </div>
       </div>
 
@@ -221,34 +267,34 @@ const Dashboard = () => {
 
         {/* Liste des tickets */}
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Problème</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priorité</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ton</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredTickets.length === 0 ? (
+          {filteredTickets.length === 0 ? (
+            <div className="p-12 text-center text-gray-500">
+              <FileText className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+              <p className="text-xl font-semibold mb-2">Aucune demande trouvée</p>
+              <p className="text-sm">Créez votre première demande via le Bot Accompagnement (Texte) ou le Mode Vocal</p>
+            </div>
+          ) : (
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td colSpan="8" className="px-6 py-8 text-center text-gray-500">
-                    Aucun ticket trouvé
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Problème</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priorité</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ton</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                 </tr>
-              ) : (
-                filteredTickets.map((ticket) => (
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {filteredTickets.map((ticket) => (
                   <tr key={ticket.ticket_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900">
                       {ticket.ticket_id}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      <div>{ticket.customer_name}</div>
+                      <div>{ticket.customer_name || 'Client'}</div>
                       <div className="text-xs text-gray-400">{ticket.order_number}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
@@ -284,13 +330,7 @@ const Dashboard = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
-                      {new Date(ticket.created_at).toLocaleString('fr-FR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {formatDate(ticket.created_at)}
                     </td>
                     <td className="px-6 py-4 text-sm">
                       <button
@@ -302,10 +342,10 @@ const Dashboard = () => {
                       </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -314,7 +354,7 @@ const Dashboard = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-4 flex justify-between items-center">
-              <h2 className="text-xl font-bold">📄 Dossier Client - {selectedTicket}</h2>
+              <h2 className="text-xl font-bold">📄 Dossier Clientèle - {selectedTicket}</h2>
               <div className="flex space-x-2">
                 <button
                   onClick={() => downloadDossier(tickets.find(t => t.ticket_id === selectedTicket))}
