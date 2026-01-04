@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 import json
 from app.services.product_catalog import product_catalog
 from app.services.sav_knowledge import sav_kb
-from app.services.sav_workflow_engine import sav_workflow_engine
 from app.services.evidence_collector import evidence_collector
 from app.services.warranty_service import warranty_service
 from app.models.warranty import WarrantyType
@@ -362,7 +361,8 @@ PRODUCTS AVAILABLE:
 
     async def chat(self, user_message: str,
                    order_number: Optional[str] = None,
-                   photos: Optional[List[str]] = None) -> Dict:
+                   photos: Optional[List[str]] = None,
+                   db_session=None) -> Dict:
         """
         Gère la conversation avec le client
 
@@ -370,11 +370,15 @@ PRODUCTS AVAILABLE:
             user_message: Message du client
             order_number: Numéro de commande (si fourni)
             photos: Liste URLs photos uploadées
+            db_session: Database session for ticket persistence (optional)
 
         Returns:
             Dict avec réponse et metadata
         """
         try:
+            # Store db_session for later use in create_ticket_after_validation
+            self.db_session = db_session
+
             # Détection langue
             language = self.detect_language(user_message)
 
@@ -651,8 +655,10 @@ Utilise ces infos pour réponse rapide et pertinente.
                 warranty_type=WarrantyType.STANDARD
             )
 
-            # Lancer le workflow SAV automatique
-            ticket = await sav_workflow_engine.process_new_claim(
+            # Lancer le workflow SAV automatique avec persistence DB
+            from app.services.sav_workflow_engine import SAVWorkflowEngine
+            workflow_engine = SAVWorkflowEngine(db_session=self.db_session)
+            ticket = await workflow_engine.process_new_claim(
                 customer_id=customer_id,
                 order_number=order_number,
                 product_sku=product_sku,
@@ -689,7 +695,10 @@ Utilise ces infos pour réponse rapide et pertinente.
                 "evidence_requirements": evidence_message,
                 "created_at": ticket.created_at.isoformat(),
                 "language": self.detect_language(user_message),
-                "problem_description": user_message
+                "problem_description": user_message,
+                # 🎯 NOUVEAU: Informations de validation
+                "requires_validation": ticket.client_summary.validation_required if ticket.client_summary else False,
+                "validation_status": ticket.validation_status
             }
 
             logger.info(
@@ -898,8 +907,10 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             logger.info(f"✅ Création ticket après validation: {data['order_number']}")
 
-            # Créer le ticket SAV complet
-            ticket = await sav_workflow_engine.process_new_claim(
+            # Créer le ticket SAV complet avec persistence DB
+            from app.services.sav_workflow_engine import SAVWorkflowEngine
+            workflow_engine = SAVWorkflowEngine(db_session=self.db_session)
+            ticket = await workflow_engine.process_new_claim(
                 customer_id=data["customer_id"],
                 order_number=data["order_number"],
                 product_sku=data["product_sku"],

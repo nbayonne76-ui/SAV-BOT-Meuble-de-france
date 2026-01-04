@@ -17,6 +17,8 @@ from app.core.config import settings
 from app.core.rate_limit import limiter, RateLimits
 from app.api.deps import get_current_user, OptionalAuth
 from app.models.user import UserDB
+from app.db.session import get_db
+from sqlalchemy.orm import Session
 
 # Force reload .env to get fresh API key
 backend_dir = Path(__file__).parent.parent.parent.parent
@@ -85,6 +87,9 @@ class ChatResponse(BaseModel):
     language: str
     conversation_type: str
     session_id: str
+    requires_validation: Optional[bool] = False
+    ticket_id: Optional[str] = None
+    should_close_session: Optional[bool] = False
 
 
 def extract_order_number(message: str) -> Optional[str]:
@@ -121,7 +126,8 @@ def extract_order_number(message: str) -> Optional[str]:
 async def chat(
     request: Request,
     chat_request: ChatRequest,
-    current_user: Optional[UserDB] = Depends(OptionalAuth())
+    current_user: Optional[UserDB] = Depends(OptionalAuth()),
+    db: Session = Depends(get_db)
 ):
     """
     Send a message to the chatbot.
@@ -162,7 +168,8 @@ async def chat(
         result = await chatbot.chat(
             user_message=chat_request.message,
             order_number=order_number,
-            photos=chat_request.photos
+            photos=chat_request.photos,
+            db_session=db
         )
 
         if "error" in result:
@@ -174,11 +181,19 @@ async def chat(
                 session_id=session_id
             )
 
+        # Extract validation info from ticket_data
+        ticket_data = result.get("ticket_data", {})
+        requires_validation = ticket_data.get("requires_validation", False) if ticket_data else False
+        ticket_id = ticket_data.get("ticket_id") if ticket_data else None
+
         return ChatResponse(
             response=result["response"],
             language=result.get("language", "fr"),
             conversation_type=result.get("conversation_type", "general"),
-            session_id=session_id
+            session_id=session_id,
+            requires_validation=requires_validation,
+            ticket_id=ticket_id,
+            should_close_session=result.get("should_close_session", False)
         )
 
     except ValueError as e:
@@ -228,6 +243,109 @@ async def clear_session(
         return {"success": True, "message": "Session cleared"}
 
     return {"success": False, "message": "Session not found"}
+
+
+@router.post("/validate/{ticket_id}", status_code=status.HTTP_200_OK)
+@limiter.limit(RateLimits.API_WRITE)
+async def validate_ticket(
+    request: Request,
+    ticket_id: str,
+    current_user: Optional[UserDB] = Depends(OptionalAuth()),
+    db: Session = Depends(get_db)
+):
+    """
+    Validate a ticket and persist it to the database.
+    This is called when the user clicks "Valider" on the recap.
+    """
+    try:
+        # Import here to avoid circular imports
+        from app.services.sav_workflow_engine import sav_workflow_engine
+
+        # Validate ticket ID format
+        if not re.match(r'^SAV-\d{8}-\d+$', ticket_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID format"
+            )
+
+        # Set database session for persistence
+        sav_workflow_engine.db_session = db
+
+        # Validate the ticket
+        result = sav_workflow_engine.validate_ticket(ticket_id)
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result.get("error", "Ticket not found")
+            )
+
+        logger.info(f"✅ Ticket {ticket_id} validé avec succès")
+
+        return {
+            "success": True,
+            "message": "Ticket validé et créé dans le système",
+            "ticket_id": result.get("ticket_id"),
+            "response": "✅ Parfait ! Votre demande a été enregistrée.\n\nVotre ticket a été créé avec succès. Notre équipe va traiter votre demande dans les meilleurs délais.\n\nVous recevrez une confirmation par email avec le numéro de suivi.\n\nY a-t-il autre chose pour laquelle je peux vous aider ?"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erreur validation ticket: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error: {str(e)}" if settings.DEBUG else "An error occurred"
+        )
+
+
+@router.post("/cancel/{ticket_id}", status_code=status.HTTP_200_OK)
+@limiter.limit(RateLimits.API_WRITE)
+async def cancel_ticket(
+    request: Request,
+    ticket_id: str,
+    current_user: Optional[UserDB] = Depends(OptionalAuth())
+):
+    """
+    Cancel a ticket that is pending validation.
+    This is called when the user clicks "Modifier" on the recap.
+    """
+    try:
+        # Import here to avoid circular imports
+        from app.services.sav_workflow_engine import sav_workflow_engine
+
+        # Validate ticket ID format
+        if not re.match(r'^SAV-\d{8}-\d+$', ticket_id):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid ticket ID format"
+            )
+
+        # Cancel the ticket
+        result = sav_workflow_engine.cancel_ticket(ticket_id)
+
+        if not result.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=result.get("error", "Ticket not found")
+            )
+
+        logger.info(f"❌ Ticket {ticket_id} annulé par l'utilisateur")
+
+        return {
+            "success": True,
+            "message": "Ticket annulé",
+            "response": "D'accord, je recommence. Pouvez-vous me redonner les informations corrigées ?"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Erreur annulation ticket: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Server error: {str(e)}" if settings.DEBUG else "An error occurred"
+        )
 
 
 @router.get("/sessions/count", status_code=status.HTTP_200_OK)

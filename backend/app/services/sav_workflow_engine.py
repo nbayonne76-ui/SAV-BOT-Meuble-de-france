@@ -132,8 +132,9 @@ class SAVWorkflowEngine:
     Implémente le processus complet de bout en bout
     """
 
-    def __init__(self):
+    def __init__(self, db_session=None):
         self.active_tickets: Dict[str, SAVTicket] = {}
+        self.db_session = db_session  # Optional database session for persistence
 
         # Configuration des preuves requises par catégorie
         self.evidence_requirements = {
@@ -163,6 +164,22 @@ class SAVWorkflowEngine:
                 "description": "Photos des dommages + emballage + bon de livraison"
             }
         }
+
+    def _persist_ticket(self, ticket: SAVTicket):
+        """Persist ticket to database if db_session is available"""
+        if self.db_session:
+            try:
+                from app.repositories.ticket_repository import ticket_repository
+                existing = ticket_repository.get_by_id(self.db_session, ticket.ticket_id)
+                if existing:
+                    ticket_repository.update(self.db_session, ticket)
+                else:
+                    ticket_repository.create(self.db_session, ticket)
+            except Exception as e:
+                logger.error(f"Erreur persistence ticket {ticket.ticket_id}: {e}")
+                # Ne pas lever l'exception pour ne pas bloquer le workflow
+        else:
+            logger.debug(f"Ticket {ticket.ticket_id} non persisté (pas de session DB)")
 
     async def process_new_claim(
         self,
@@ -233,8 +250,16 @@ class SAVWorkflowEngine:
         # 🎯 8. Générer le récapitulatif client pour validation
         ticket = self._generate_client_summary(ticket)
 
-        # Sauvegarder le ticket
+        # Sauvegarder le ticket en mémoire
         self.active_tickets[ticket.ticket_id] = ticket
+
+        # 🎯 NOUVEAU: Ne persister en base que si validation non requise
+        # Si validation requise, attendre la confirmation de l'utilisateur
+        if not (ticket.client_summary and ticket.client_summary.validation_required):
+            self._persist_ticket(ticket)
+            logger.info(f"✅ Ticket {ticket.ticket_id} persisté en base (pas de validation requise)")
+        else:
+            logger.info(f"⏳ Ticket {ticket.ticket_id} en attente de validation utilisateur (non persisté)")
 
         logger.info(
             f"✅ Ticket {ticket.ticket_id} traité: "
@@ -797,6 +822,90 @@ class SAVWorkflowEngine:
             "P3": "🟢"
         }
         return emojis.get(priority, "⚪")
+
+    def validate_ticket(self, ticket_id: str) -> Dict:
+        """
+        Valide un ticket et le persiste en base de données
+
+        Args:
+            ticket_id: ID du ticket à valider
+
+        Returns:
+            Dict avec le statut de validation
+        """
+        if ticket_id not in self.active_tickets:
+            logger.error(f"❌ Ticket {ticket_id} non trouvé pour validation")
+            return {"success": False, "error": f"Ticket {ticket_id} non trouvé"}
+
+        ticket = self.active_tickets[ticket_id]
+
+        # Mettre à jour le statut de validation
+        ticket.validation_status = "validated"
+        ticket.updated_at = datetime.now()
+
+        # Ajouter une action
+        ticket.actions.append(TicketAction(
+            action_id=f"{ticket.ticket_id}-ACT-{len(ticket.actions) + 1:03d}",
+            timestamp=datetime.now(),
+            actor="customer",
+            action_type="ticket_validated",
+            description="Ticket validé par le client",
+            metadata={"validation_time": datetime.now().isoformat()}
+        ))
+
+        # Persister en base de données
+        self._persist_ticket(ticket)
+
+        logger.info(f"✅ Ticket {ticket_id} validé et persisté en base de données")
+
+        return {
+            "success": True,
+            "ticket_id": ticket.ticket_id,
+            "status": ticket.status,
+            "validation_status": ticket.validation_status
+        }
+
+    def cancel_ticket(self, ticket_id: str) -> Dict:
+        """
+        Annule un ticket en attente de validation
+
+        Args:
+            ticket_id: ID du ticket à annuler
+
+        Returns:
+            Dict avec le statut d'annulation
+        """
+        if ticket_id not in self.active_tickets:
+            logger.error(f"❌ Ticket {ticket_id} non trouvé pour annulation")
+            return {"success": False, "error": f"Ticket {ticket_id} non trouvé"}
+
+        ticket = self.active_tickets[ticket_id]
+
+        # Mettre à jour le statut
+        ticket.validation_status = "cancelled"
+        ticket.status = TicketStatus.CANCELLED
+        ticket.updated_at = datetime.now()
+
+        # Ajouter une action
+        ticket.actions.append(TicketAction(
+            action_id=f"{ticket.ticket_id}-ACT-{len(ticket.actions) + 1:03d}",
+            timestamp=datetime.now(),
+            actor="customer",
+            action_type="ticket_cancelled",
+            description="Ticket annulé par le client",
+            metadata={"cancellation_time": datetime.now().isoformat()}
+        ))
+
+        # Retirer de la liste active
+        del self.active_tickets[ticket_id]
+
+        logger.info(f"❌ Ticket {ticket_id} annulé par le client")
+
+        return {
+            "success": True,
+            "ticket_id": ticket.ticket_id,
+            "validation_status": "cancelled"
+        }
 
     def get_ticket_summary(self, ticket_id: str) -> Dict:
         """Génère un résumé du ticket pour le chatbot"""

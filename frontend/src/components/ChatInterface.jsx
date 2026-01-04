@@ -224,7 +224,10 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
     };
 
     utterance.onerror = (error) => {
-      console.error('❌ Erreur synthèse vocale:', error);
+      // L'erreur "interrupted" est normale quand on annule pour démarrer une nouvelle synthèse
+      if (error.error !== 'interrupted') {
+        console.error('❌ Erreur synthèse vocale:', error);
+      }
       setIsSpeaking(false);
     };
 
@@ -246,6 +249,70 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
       stopSpeaking();
     }
     setIsSpeechEnabled(!isSpeechEnabled);
+  };
+
+  // 🎯 Fonction pour valider un ticket
+  const handleValidateTicket = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/chat/validate/${ticketId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur validation');
+      }
+
+      const data = await response.json();
+
+      // Afficher le message de confirmation
+      const confirmationMessage = {
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, confirmationMessage]);
+
+      // 🔊 Faire parler le bot
+      if (isSpeechEnabled && data.response) {
+        setTimeout(() => speakText(data.response), 300);
+      }
+    } catch (error) {
+      console.error('Erreur validation ticket:', error);
+      alert('Erreur lors de la validation du ticket. Veuillez réessayer.');
+    }
+  };
+
+  // 🎯 Fonction pour annuler/modifier un ticket
+  const handleCancelTicket = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/chat/cancel/${ticketId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur annulation');
+      }
+
+      const data = await response.json();
+
+      // Afficher le message de réinitialisation
+      const resetMessage = {
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, resetMessage]);
+
+      // 🔊 Faire parler le bot
+      if (isSpeechEnabled && data.response) {
+        setTimeout(() => speakText(data.response), 300);
+      }
+    } catch (error) {
+      console.error('Erreur annulation ticket:', error);
+      alert('Erreur lors de l\'annulation du ticket. Veuillez réessayer.');
+    }
   };
 
   const sendMessage = async () => {
@@ -344,7 +411,10 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
         content: data.response,
         language: data.language,
         conversation_type: data.conversation_type,
-        timestamp: new Date()
+        timestamp: new Date(),
+        // 🎯 NOUVEAU: Ajouter les infos de validation
+        requires_validation: data.requires_validation,
+        ticket_id: data.ticket_id
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -563,6 +633,32 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
                           )}
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* 🎯 NOUVEAU: Boutons de validation */}
+                  {msg.role === 'assistant' && msg.requires_validation && msg.ticket_id && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <p className="text-sm font-semibold text-gray-700 mb-3">
+                        ⚡ Ces informations sont-elles correctes ?
+                      </p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => handleValidateTicket(msg.ticket_id)}
+                          className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                        >
+                          ✅ Valider
+                        </button>
+                        <button
+                          onClick={() => handleCancelTicket(msg.ticket_id)}
+                          className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                        >
+                          ✏️ Modifier
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2 text-center">
+                        Cliquez sur "Valider" pour créer votre ticket, ou "Modifier" pour corriger les informations
+                      </p>
                     </div>
                   )}
 
