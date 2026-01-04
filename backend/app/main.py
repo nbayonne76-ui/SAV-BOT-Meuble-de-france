@@ -19,6 +19,7 @@ from app.core.redis import CacheManager
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
+from app.services.cloudinary_storage import CloudinaryService
 
 # Setup logging
 logger = setup_logging()
@@ -53,6 +54,16 @@ async def lifespan(app: FastAPI):
         logger.info("Storage initialized successfully")
     except Exception as e:
         logger.error(f"Storage initialization failed: {e}")
+
+    # Initialize Cloudinary if configured
+    try:
+        CloudinaryService.initialize()
+        if settings.USE_CLOUDINARY:
+            logger.info(f"Cloudinary initialized: {settings.CLOUDINARY_CLOUD_NAME}")
+        else:
+            logger.info("Cloudinary not configured - using local storage")
+    except Exception as e:
+        logger.error(f"Cloudinary initialization failed: {e}")
 
     # Create necessary directories
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)

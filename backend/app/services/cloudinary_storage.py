@@ -7,6 +7,8 @@ import cloudinary.uploader
 import cloudinary.api
 from typing import Dict, Any, Optional
 import logging
+import asyncio
+from functools import partial
 from pathlib import Path
 
 from app.core.config import settings
@@ -72,14 +74,20 @@ class CloudinaryService:
             raise Exception("Cloudinary not configured")
 
         try:
-            # Upload to Cloudinary
-            result = cloudinary.uploader.upload(
-                file_path,
-                folder=folder,
-                public_id=public_id,
-                resource_type=resource_type,
-                unique_filename=True if not public_id else False,
-                overwrite=False
+            # Upload to Cloudinary in a thread pool to avoid blocking
+            # The cloudinary SDK is synchronous, so we run it in a thread
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                partial(
+                    cloudinary.uploader.upload,
+                    file_path,
+                    folder=folder,
+                    public_id=public_id,
+                    resource_type=resource_type,
+                    unique_filename=True if not public_id else False,
+                    overwrite=False
+                )
             )
 
             logger.info(f"File uploaded to Cloudinary: {result.get('public_id')}")
@@ -117,9 +125,15 @@ class CloudinaryService:
             return False
 
         try:
-            result = cloudinary.uploader.destroy(
-                public_id,
-                resource_type=resource_type
+            # Run synchronous Cloudinary delete in thread pool
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                partial(
+                    cloudinary.uploader.destroy,
+                    public_id,
+                    resource_type=resource_type
+                )
             )
 
             success = result.get("result") == "ok"
