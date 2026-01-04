@@ -23,6 +23,7 @@ email-validator>=2.1.0
 pillow>=11.0.0
 aiofiles>=24.1.0
 python-magic>=0.4.27
+cloudinary>=1.44.0
 
 # Utilities
 python-dotenv>=1.0.1
