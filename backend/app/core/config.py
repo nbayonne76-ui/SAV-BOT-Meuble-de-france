@@ -126,9 +126,19 @@ class Settings:
         # ===================
         self.CORS_ORIGINS = os.getenv(
             "CORS_ORIGINS",
-            "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://localhost:5176,http://localhost:3000,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://127.0.0.1:5176"
+            (
+                "http://localhost:5173,"
+                "http://localhost:5174,"
+                "http://localhost:5175,"
+                "http://localhost:5176,"
+                "http://localhost:3000,"
+                "http://127.0.0.1:5173,"
+                "http://127.0.0.1:5174,"
+                "http://127.0.0.1:5175,"
+                "https://proactive-nurturing-production.up.railway.app/,"
+                "http://127.0.0.1:5176"
+            )
         )
-
         # ===================
         # Rate Limiting
         # ===================
@@ -139,7 +149,8 @@ class Settings:
         # Computed Properties
         # ===================
         self.cors_origins_list = [
-            origin.strip() for origin in self.CORS_ORIGINS.split(",")
+            origin.strip()
+            for origin in self.CORS_ORIGINS.split(",")
             if origin.strip()
         ]
         self.allowed_extensions_list = [
