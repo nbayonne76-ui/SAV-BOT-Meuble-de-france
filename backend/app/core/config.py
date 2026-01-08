@@ -79,7 +79,9 @@ class Settings:
                 database_url = "sqlite:///./chatbot.db"
                 print(f"[INFO] Using SQLite: {database_url}")
         else:
-            print(f"[DEBUG] DATABASE_URL found: {database_url[:20]}...")
+            # Redact sensitive connection info from logs
+            db_type = database_url.split('://')[0] if '://' in database_url else 'unknown'
+            print(f"[DEBUG] DATABASE_URL found: {db_type}://***")
 
             # Transform PostgreSQL URLs for SQLAlchemy compatibility
             # Railway/Heroku provide postgresql:// but SQLAlchemy needs postgresql+psycopg2://
@@ -221,12 +223,18 @@ class Settings:
 # Create global settings instance
 settings = Settings()
 
-# Log configuration status (safe info only)
+# Log configuration status (safe info only - NO SENSITIVE DATA)
 if settings.DEBUG:
     print(f"[CONFIG] App: {settings.APP_NAME} v{settings.APP_VERSION}")
     print(f"[CONFIG] Debug mode: {settings.DEBUG}")
-    print(f"[CONFIG] Database: {settings.DATABASE_URL.split('://')[0]}://***")
-    print(f"[CONFIG] OpenAI API Key loaded: {'Yes' if settings.OPENAI_API_KEY else 'No'}")
+    # Only show database type, not connection string
+    db_type = settings.DATABASE_URL.split('://')[0] if '://' in settings.DATABASE_URL else 'unknown'
+    print(f"[CONFIG] Database type: {db_type}")
+    # Never log the actual API key, just confirm it's loaded
+    print(f"[CONFIG] OpenAI API Key: {'✓ Loaded' if settings.OPENAI_API_KEY else '✗ Missing'}")
+    print(f"[CONFIG] HTTPS Enforcement: {'✓ Enabled' if settings.ENFORCE_HTTPS else '✗ Disabled'}")
+    print(f"[CONFIG] Redis: {'✓ Configured' if not settings.REDIS_URL.startswith('memory') else 'In-memory'}")
+    print(f"[CONFIG] Cloudinary: {'✓ Configured' if settings.USE_CLOUDINARY else 'Local storage'}")
 
 
 # Helper functions for backwards compatibility
