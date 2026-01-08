@@ -30,7 +30,8 @@ class Settings:
         # ===================
         self.APP_NAME = os.getenv("APP_NAME", "Mobilier de France Chatbot")
         self.APP_VERSION = os.getenv("APP_VERSION", "1.0.0")
-        self.DEBUG = os.getenv("DEBUG", "True").lower() == "true"
+        # DEBUG defaults to False for security - explicitly set to True for development
+        self.DEBUG = os.getenv("DEBUG", "False").lower() == "true"
         self.HOST = os.getenv("HOST", "0.0.0.0")
         self.PORT = int(os.getenv("PORT", "8000"))
 
@@ -58,19 +59,25 @@ class Settings:
         # ===================
         database_url = os.getenv("DATABASE_URL")
 
-        # Debug: Check if DATABASE_URL is set
+        # Check if DATABASE_URL is set
         if not database_url or database_url.strip() == "":
-            print("[WARNING] DATABASE_URL environment variable is not set or is empty!")
             if not self.DEBUG:
-                print("[ERROR] DATABASE_URL is required in production!")
-                print("[INFO] Available environment variables:", list(os.environ.keys())[:10])
-            database_url = "sqlite:///./chatbot.db"
-            print(f"[INFO] Falling back to SQLite: {database_url}")
+                # In production, DATABASE_URL is REQUIRED
+                raise ValueError(
+                    "DATABASE_URL environment variable is required in production! "
+                    "Please set a PostgreSQL connection string. "
+                    "Example: postgresql://user:password@host:port/database"
+                )
+            else:
+                # In development, fall back to SQLite
+                print("[WARNING] DATABASE_URL not set - using SQLite for development")
+                database_url = "sqlite:///./chatbot.db"
+                print(f"[INFO] Using SQLite: {database_url}")
         else:
             print(f"[DEBUG] DATABASE_URL found: {database_url[:20]}...")
 
             # Transform PostgreSQL URLs for SQLAlchemy compatibility
-            # Railway provides postgresql:// but SQLAlchemy needs postgresql+psycopg2://
+            # Railway/Heroku provide postgresql:// but SQLAlchemy needs postgresql+psycopg2://
             if database_url.startswith("postgresql://"):
                 database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
                 print("[INFO] Transformed postgresql:// to postgresql+psycopg2://")
@@ -80,14 +87,30 @@ class Settings:
 
         self.DATABASE_URL = database_url
 
-        # Warn if using SQLite in non-debug mode
+        # Validate: SQLite not allowed in production
         if not self.DEBUG and self.DATABASE_URL.startswith("sqlite"):
-            print("[WARNING] Using SQLite in production is not recommended!")
+            raise ValueError(
+                "SQLite is not supported in production! "
+                "Please configure a PostgreSQL DATABASE_URL."
+            )
 
         # ===================
         # Redis Settings
         # ===================
-        self.REDIS_URL = os.getenv("REDIS_URL", "memory://")  # Use memory in development
+        redis_url = os.getenv("REDIS_URL")
+
+        if not redis_url:
+            if not self.DEBUG:
+                # In production, warn about memory cache limitations
+                print("[WARNING] REDIS_URL not set - using in-memory cache")
+                print("[WARNING] Memory cache will not work correctly with multiple workers!")
+                print("[INFO] For production, configure a Redis instance")
+                redis_url = "memory://"
+            else:
+                # In development, memory cache is fine
+                redis_url = "memory://"
+
+        self.REDIS_URL = redis_url
 
         # ===================
         # API Keys
