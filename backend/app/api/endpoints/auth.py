@@ -7,7 +7,7 @@ from typing import Optional
 import uuid
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -39,6 +39,7 @@ from app.models.user import (
     APIKeyResponse
 )
 from app.api.deps import get_current_active_user, require_admin
+from app.core.rate_limit import limiter, RateLimits
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -63,12 +64,15 @@ class MessageResponse(BaseModel):
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(RateLimits.AUTH_REGISTER)
 async def register(
+    request: Request,
     user_data: UserCreate,
     db: Session = Depends(get_db)
 ):
     """
     Register a new user account.
+    Rate limited to prevent abuse.
     """
     # Check if email already exists
     existing_email = db.query(UserDB).filter(UserDB.email == user_data.email).first()
@@ -109,13 +113,16 @@ async def register(
 
 
 @router.post("/login", response_model=Token)
+@limiter.limit(RateLimits.AUTH_LOGIN)
 async def login(
+    request: Request,
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
     """
     OAuth2 compatible login endpoint.
     Returns access and refresh tokens.
+    Rate limited to prevent brute force attacks.
     """
     # Find user by username or email
     user = db.query(UserDB).filter(
@@ -193,15 +200,18 @@ async def login(
 
 
 @router.post("/refresh", response_model=Token)
+@limiter.limit(RateLimits.AUTH_LOGIN)
 async def refresh_token(
-    request: RefreshTokenRequest,
+    request: Request,
+    token_request: RefreshTokenRequest,
     db: Session = Depends(get_db)
 ):
     """
     Refresh access token using a valid refresh token.
     The old refresh token is blacklisted to prevent reuse.
+    Rate limited to prevent token enumeration attacks.
     """
-    token_data = verify_token(request.refresh_token, token_type="refresh")
+    token_data = verify_token(token_request.refresh_token, token_type="refresh")
 
     if not token_data:
         raise HTTPException(
@@ -220,7 +230,7 @@ async def refresh_token(
 
     # Blacklist the old refresh token to prevent replay attacks
     try:
-        await blacklist_token(request.refresh_token)
+        await blacklist_token(token_request.refresh_token)
         logger.info(f"Old refresh token blacklisted for user: {user.username}")
     except Exception as e:
         logger.error(f"Failed to blacklist old refresh token: {e}")
@@ -312,13 +322,16 @@ async def update_current_user(
 
 
 @router.post("/me/change-password", response_model=MessageResponse)
+@limiter.limit(RateLimits.AUTH_PASSWORD_RESET)
 async def change_password(
+    request: Request,
     password_data: PasswordChange,
     current_user: UserDB = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
     Change current user's password.
+    Rate limited to prevent brute force attacks.
     """
     # Verify current password
     if not verify_password(password_data.current_password, current_user.hashed_password):
@@ -340,7 +353,9 @@ async def change_password(
 # ============== API Key Management ==============
 
 @router.post("/api-keys", response_model=APIKeyResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit(RateLimits.API_WRITE)
 async def create_api_key(
+    request: Request,
     key_data: APIKeyCreate,
     current_user: UserDB = Depends(get_current_active_user),
     db: Session = Depends(get_db)
@@ -348,6 +363,7 @@ async def create_api_key(
     """
     Create a new API key for the current user.
     The key is only shown once in this response.
+    Rate limited to prevent abuse.
     """
     # Generate API key
     api_key = generate_api_key()
@@ -379,13 +395,16 @@ async def create_api_key(
 
 
 @router.delete("/api-keys/{key_id}", response_model=MessageResponse)
+@limiter.limit(RateLimits.API_WRITE)
 async def revoke_api_key(
+    request: Request,
     key_id: str,
     current_user: UserDB = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
     Revoke an API key.
+    Rate limited to prevent abuse.
     """
     api_key = db.query(APIKeyDB).filter(
         APIKeyDB.id == key_id,
