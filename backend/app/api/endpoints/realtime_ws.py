@@ -4,11 +4,11 @@ WebSocket Proxy pour OpenAI Realtime API
 Fait le relais entre le frontend et OpenAI Realtime API
 """
 import asyncio
-import os
 import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import websockets
 import json
+from app.core.config import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ async def realtime_websocket_proxy(websocket: WebSocket):
     logger.info("✅ Frontend connecté au proxy WebSocket")
 
     # Obtenir la clé API
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = settings.OPENAI_API_KEY
     if not api_key:
         await websocket.send_json({
             "type": "error",

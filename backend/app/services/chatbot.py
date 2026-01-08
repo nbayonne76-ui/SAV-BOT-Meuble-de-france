@@ -376,8 +376,8 @@ PRODUCTS AVAILABLE:
             Dict avec réponse et metadata
         """
         try:
-            # Store db_session for later use in create_ticket_after_validation
-            self.db_session = db_session
+            # Do not store request-scoped DB sessions on the chatbot instance (avoid stale/long-lived sessions).
+            # Pass `db_session` explicitly to methods that need it.
 
             # Détection langue
             language = self.detect_language(user_message)
@@ -467,15 +467,20 @@ Utilise ces infos pour réponse rapide et pertinente.
             ]
             messages.extend(self.conversation_history)
 
-            # Appel OpenAI API
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",  # Changed from gpt-4 to save costs (200x cheaper!)
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.7
-            )
-
-            assistant_message = response.choices[0].message.content
+            # Appel OpenAI API (run blocking SDK call in executor to avoid blocking event loop)
+            import asyncio
+            loop = asyncio.get_running_loop()
+            try:
+                resp = await loop.run_in_executor(None, lambda: self.client.chat.completions.create(
+                    model="gpt-4o-mini",  # Changed from gpt-4 to save costs (200x cheaper!)
+                    messages=messages,
+                    max_tokens=1000,
+                    temperature=0.7
+                ))
+                assistant_message = resp.choices[0].message.content if getattr(resp, 'choices', None) else str(resp)
+            except Exception as e:
+                logger.error(f"OpenAI call failed: {e}")
+                raise
 
             # Ajout réponse à l'historique
             self.conversation_history.append({
@@ -522,7 +527,8 @@ Utilise ces infos pour réponse rapide et pertinente.
                 validation_data = await self.prepare_ticket_validation(
                     user_message=user_message,
                     order_number=order_number,
-                    customer_id=None
+                    customer_id=None,
+                    db_session=db_session
                 )
                 # Pas de ticket créé, juste données pour validation
                 sav_ticket_data = {"validation_pending": True, "validation_data": validation_data}
@@ -589,7 +595,8 @@ Utilise ces infos pour réponse rapide et pertinente.
         self,
         user_message: str,
         order_number: Optional[str] = None,
-        customer_id: Optional[str] = None
+        customer_id: Optional[str] = None,
+        db_session: Optional[object] = None
     ) -> Optional[Dict]:
         """
         Initialise le workflow SAV automatique si les conditions sont remplies
@@ -657,7 +664,7 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             # Lancer le workflow SAV automatique avec persistence DB
             from app.services.sav_workflow_engine import SAVWorkflowEngine
-            workflow_engine = SAVWorkflowEngine(db_session=self.db_session)
+            workflow_engine = SAVWorkflowEngine(db_session=db_session)
             ticket = await workflow_engine.process_new_claim(
                 customer_id=customer_id,
                 order_number=order_number,
@@ -793,7 +800,8 @@ Utilise ces infos pour réponse rapide et pertinente.
         self,
         user_message: str,
         order_number: str,
-        customer_id: Optional[str] = None
+        customer_id: Optional[str] = None,
+        db_session: Optional[object] = None
     ) -> Dict:
         """
         Prépare le ticket SAV pour validation client SANS le créer
@@ -891,7 +899,7 @@ Utilise ces infos pour réponse rapide et pertinente.
             logger.error(f"❌ Erreur préparation validation: {str(e)}")
             raise
 
-    async def create_ticket_after_validation(self) -> Dict:
+    async def create_ticket_after_validation(self, db_session: Optional[object] = None) -> Dict:
         """
         Crée le ticket SAV après validation du client
         Utilise les données stockées dans pending_ticket_validation
@@ -909,7 +917,7 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             # Créer le ticket SAV complet avec persistence DB
             from app.services.sav_workflow_engine import SAVWorkflowEngine
-            workflow_engine = SAVWorkflowEngine(db_session=self.db_session)
+            workflow_engine = SAVWorkflowEngine(db_session=db_session)
             ticket = await workflow_engine.process_new_claim(
                 customer_id=data["customer_id"],
                 order_number=data["order_number"],

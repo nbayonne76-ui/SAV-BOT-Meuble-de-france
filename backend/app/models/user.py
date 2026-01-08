@@ -11,18 +11,18 @@ import re
 
 class UserRole(str, Enum):
     """User roles for authorization"""
-    CUSTOMER = "customer"
-    AGENT = "agent"
-    ADMIN = "admin"
-    API_SERVICE = "api_service"
+    CUSTOMER = "CUSTOMER"
+    AGENT = "AGENT"
+    ADMIN = "ADMIN"
+    API_SERVICE = "API_SERVICE"
 
 
 class UserStatus(str, Enum):
     """User account status"""
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    SUSPENDED = "suspended"
-    PENDING_VERIFICATION = "pending_verification"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    SUSPENDED = "SUSPENDED"
+    PENDING_VERIFICATION = "PENDING_VERIFICATION"
 
 
 # ============== Request/Response Models ==============

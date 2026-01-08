@@ -5,7 +5,7 @@ Fournit le token d'authentification de manière sécurisée
 """
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import os
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -29,12 +29,12 @@ async def get_realtime_token():
     Raises:
         HTTPException: Si la clé API n'est pas configurée
     """
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = settings.OPENAI_API_KEY
 
     if not api_key:
         raise HTTPException(
             status_code=500,
-            detail="Clé API OpenAI non configurée. Vérifiez la variable d'environnement OPENAI_API_KEY"
+            detail="Clé API OpenAI non configurée. Vérifiez la configuration de l'application"
         )
 
     return RealtimeTokenResponse(token=api_key)
@@ -48,7 +48,7 @@ async def realtime_health_check():
     Returns:
         dict: Statut du service
     """
-    has_api_key = bool(os.getenv("OPENAI_API_KEY"))
+    has_api_key = bool(settings.OPENAI_API_KEY)
 
     return {
         "status": "ok" if has_api_key else "error",

@@ -45,6 +45,12 @@ cp .env.example .env
 # Start all services
 docker-compose up -d
 
+# If you only need the database and cache locally (recommended for first-time setup):
+# docker-compose up -d postgres redis
+
+# Run database migrations (after services are up):
+# docker-compose exec backend alembic upgrade head
+
 # View logs
 docker-compose logs -f
 

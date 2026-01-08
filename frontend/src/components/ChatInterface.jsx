@@ -10,6 +10,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
@@ -22,25 +23,25 @@ const ChatInterface = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isVoiceSupported, setIsVoiceSupported] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const [isSpeechEnabled, setIsSpeechEnabled] = useState(true); // Activer voix par défaut
+  const [isSpeechEnabled, setIsSpeechEnabled] = useState(false); // Activer voix par défaut
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Language management (global)
+  const { language, setLanguage, t, languages } = useLanguage();
+  const selectedLanguage = language;
+  const languageLocales = Object.fromEntries(
+    Object.entries(languages).map(([k, v]) => [k, v.locale])
+  );
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
   const isRecognitionActive = useRef(false);
   const speechSynthesisRef = useRef(null);
 
-  // Message d'accueil
+  // Message d'accueil (i18n)
   useEffect(() => {
-    const welcomeMessage = `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
-Nous sommes à votre écoute pour un accompagnement personnalisé.
-
-Pour vous aider rapidement, donnez-moi :
-• Votre nom
-• Votre numéro de commande
-• Une description de votre problème
-
-Vous pouvez écrire ou utiliser le microphone 🎤`;
+    const welcomeMessage = t("chat.welcome.long");
 
     setMessages([
       {
@@ -53,12 +54,11 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
     // 🔊 Parler le message d'accueil après 1 seconde
     setTimeout(() => {
       if (isSpeechEnabled) {
-        const shortWelcome =
-          "Bonjour et bienvenue au service clientèle du groupe Mobilier de France. Nous sommes à votre écoute pour un accompagnement personnalisé. Pour vous aider rapidement, donnez-moi votre nom, votre numéro de commande, et une description de votre problème.";
+        const shortWelcome = t("chat.welcome.short");
         speakText(shortWelcome);
       }
     }, 1000);
-  }, []);
+  }, [selectedLanguage, isSpeechEnabled]);
 
   // Auto-scroll vers le bas
   useEffect(() => {
@@ -80,7 +80,7 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
     const recognition = new SpeechRecognition();
 
     // Configuration optimisée
-    recognition.lang = "fr-FR";
+    recognition.lang = languageLocales[selectedLanguage] || "fr-FR";
     recognition.continuous = true; // Continuer à écouter
     recognition.interimResults = true; // Afficher résultats en temps réel
     recognition.maxAlternatives = 1;
@@ -179,6 +179,14 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
     };
   }, []);
 
+  // Update recognition language when selection changes
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.lang =
+        languageLocales[selectedLanguage] || "fr-FR";
+    }
+  }, [selectedLanguage]);
+
   // 🔊 Initialiser Text-to-Speech (Synthèse vocale)
   useEffect(() => {
     if ("speechSynthesis" in window) {
@@ -214,17 +222,22 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    // Configuration voix française
-    utterance.lang = "fr-FR";
+    // Configuration voix selon la langue sélectionnée
+    const langLocale = languageLocales[selectedLanguage] || "fr-FR";
+    utterance.lang = langLocale;
     utterance.rate = 1.1; // Vitesse (0.5 à 2)
     utterance.pitch = 1.0; // Tonalité (0 à 2)
     utterance.volume = 1.0; // Volume (0 à 1)
 
-    // Chercher une voix française
+    // Chercher une voix correspondant à la langue courte (fr/en/ar...)
     const voices = speechSynthesisRef.current.getVoices();
-    const frenchVoice = voices.find((voice) => voice.lang.startsWith("fr"));
-    if (frenchVoice) {
-      utterance.voice = frenchVoice;
+    const languageShort =
+      languages[selectedLanguage]?.short || selectedLanguage;
+    const matchedVoice = voices.find(
+      (voice) => voice.lang && voice.lang.startsWith(languageShort)
+    );
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
     }
 
     // Événements
@@ -372,6 +385,7 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
     const userMessage = {
       role: "user",
       content: inputMessage,
+      language: selectedLanguage,
       files: uploadedFiles.length > 0 ? uploadedFiles : null,
       timestamp: new Date(),
     };
@@ -382,7 +396,7 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
     setIsTyping(true);
 
     try {
-      // Appel API backend
+      // Appel API backend (envoi de la langue sélectionnée)
       const response = await fetch(`${API_URL}/api/chat/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -390,6 +404,7 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
           message: inputMessage,
           session_id: sessionId,
           photos: currentFiles.map((f) => getAbsoluteUrl(f.url)),
+          language: selectedLanguage,
         }),
       });
 
@@ -436,7 +451,8 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
 
           // Réafficher le message d'accueil après 500ms
           setTimeout(() => {
-            const welcomeMessage = `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
+            const welcomeMessagesReset = {
+              fr: `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
 Nous sommes à votre écoute pour un accompagnement personnalisé.
 
 Pour vous aider rapidement, donnez-moi :
@@ -444,7 +460,26 @@ Pour vous aider rapidement, donnez-moi :
 • Votre numéro de commande
 • Une description de votre problème
 
-Vous pouvez écrire ou utiliser le microphone 🎤`;
+Vous pouvez écrire ou utiliser le microphone 🎤`,
+              en: `Hello and welcome to Mobilier de France customer support. We are here to help you.
+
+To assist quickly, please provide:
+• Your name
+• Your order number
+• A description of your issue
+
+You can type or use the microphone 🎤`,
+              ar: `مرحبًا بك في خدمة عملاء مجموعة Mobilier de France. نحن هنا لمساعدتك.
+
+للمساعدة السريعة، يرجى تقديم:
+• اسمك
+• رقم الطلب
+• وصف المشكلة
+
+يمكنك الكتابة أو استخدام الميكروفون 🎤`,
+            };
+            const welcomeMessage =
+              welcomeMessagesReset[selectedLanguage] || welcomeMessagesReset.fr;
 
             setMessages([
               {
@@ -633,10 +668,7 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
             <h1 className="text-3xl font-bold">
               🛠️ Mobilier de France - Accompagnement
             </h1>
-            <p className="text-sm opacity-90 mt-1">
-              Service d'Accompagnement Intelligent • Traitement automatisé en
-              temps réel
-            </p>
+            <p className="text-sm opacity-90 mt-1">{t("dashboard.title")}</p>
           </div>
 
           {/* 🔊 Contrôle vocal */}
@@ -650,8 +682,8 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
               }`}
               title={
                 isSpeechEnabled
-                  ? "Désactiver la voix du bot"
-                  : "Activer la voix du bot"
+                  ? t("chat.voice_title_on")
+                  : t("chat.voice_title_off")
               }
             >
               {isSpeechEnabled ? (
@@ -659,7 +691,7 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
                   <Volume2
                     className={`w-5 h-5 ${isSpeaking ? "animate-pulse" : ""}`}
                   />
-                  <span className="text-sm">Voix ON</span>
+                  <span className="text-sm">{t("chat.voice_on")}</span>
                   {isSpeaking && (
                     <span className="text-xs opacity-75">(parle...)</span>
                   )}
@@ -667,10 +699,26 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
               ) : (
                 <>
                   <VolumeX className="w-5 h-5" />
-                  <span className="text-sm">Voix OFF</span>
+                  <span className="text-sm">{t("chat.voice_off")}</span>
                 </>
               )}
             </button>
+
+            {/* Language selector */}
+            <select
+              value={selectedLanguage}
+              onChange={(e) => {
+                setLanguage(e.target.value);
+              }}
+              className="ml-3 bg-white text-sm text-gray-800 rounded px-3 py-2"
+              title={t("chat.language_label")}
+            >
+              {Object.entries(languages).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
 
             <div className="text-right text-xs opacity-80 border-l border-white/30 pl-4">
               <p className="font-semibold">🎯 100% Automatisé</p>
@@ -739,25 +787,24 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
                     msg.ticket_id && (
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         <p className="text-sm font-semibold text-gray-700 mb-3">
-                          ⚡ Ces informations sont-elles correctes ?
+                          {t("chat.validate_prompt")}
                         </p>
                         <div className="flex gap-3">
                           <button
                             onClick={() => handleValidateTicket(msg.ticket_id)}
                             className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
                           >
-                            ✅ Valider
+                            {t("chat.btn_validate")}
                           </button>
                           <button
                             onClick={() => handleCancelTicket(msg.ticket_id)}
                             className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
                           >
-                            ✏️ Modifier
+                            {t("chat.btn_modify")}
                           </button>
                         </div>
                         <p className="text-xs text-gray-500 mt-2 text-center">
-                          Cliquez sur "Valider" pour créer votre ticket, ou
-                          "Modifier" pour corriger les informations
+                          {t("chat.validate_hint")}
                         </p>
                       </div>
                     )}
@@ -769,12 +816,23 @@ Vous pouvez écrire ou utiliser le microphone 🎤`;
                     }`}
                   >
                     <span>
-                      {msg.timestamp.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {msg.timestamp.toLocaleTimeString(
+                        msg.language === "en"
+                          ? "en-US"
+                          : msg.language === "ar"
+                          ? "ar-SA"
+                          : localStorage.getItem("selectedLanguage") === "en"
+                          ? "en-US"
+                          : localStorage.getItem("selectedLanguage") === "ar"
+                          ? "ar-SA"
+                          : "fr-FR",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
                     </span>
-                    {msg.language && msg.language !== "fr" && (
+                    {msg.language && (
                       <span className="ml-2">
                         🌍 {msg.language.toUpperCase()}
                       </span>

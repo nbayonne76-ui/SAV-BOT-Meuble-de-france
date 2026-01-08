@@ -10,8 +10,6 @@ import os
 import re
 import html
 from pathlib import Path
-from dotenv import load_dotenv
-
 from app.services.chatbot import MeubledeFranceChatbot
 from app.core.config import settings
 from app.core.rate_limit import limiter, RateLimits
@@ -20,10 +18,7 @@ from app.models.user import UserDB
 from app.db.session import get_db
 from sqlalchemy.orm import Session
 
-# Force reload .env to get fresh API key
-backend_dir = Path(__file__).parent.parent.parent.parent
-env_path = backend_dir / ".env"
-load_dotenv(env_path, override=True)
+# .env is loaded centrally in `app.core.config`; avoid reloading it here
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -86,7 +81,7 @@ class ChatResponse(BaseModel):
     response: str
     language: str
     conversation_type: str
-    session_id: str
+    session_id: str | None
     requires_validation: Optional[bool] = False
     ticket_id: Optional[str] = None
     should_close_session: Optional[bool] = False
@@ -143,10 +138,10 @@ async def chat(
 
         logger.info(f"Chat request (session: {session_id}, authenticated: {current_user is not None})")
 
-        # Get API key
-        api_key = os.getenv("OPENAI_API_KEY")
+        # Get API key from settings (loaded at startup)
+        api_key = settings.OPENAI_API_KEY
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not found in environment")
+            raise ValueError("OPENAI_API_KEY not found in configuration")
 
         # Get or create chatbot instance
         if session_id not in chatbot_instances:

@@ -12,6 +12,7 @@ import {
   Camera,
   X,
 } from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 console.log(
@@ -74,6 +75,8 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
   const silenceTimerRef = useRef(null); // Timer pour détecter le silence
   const recordingTimerRef = useRef(null); // Timer pour afficher le temps d'enregistrement
   const animationFrameRef = useRef(null); // Animation frame pour la visualisation
+
+  const { t } = useLanguage();
 
   // Initialiser le contexte audio et nettoyer lors du démontage
   useEffect(() => {
@@ -998,7 +1001,17 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                       : "opacity-70"
                   }`}
                 >
-                  {msg.timestamp.toLocaleTimeString("fr-FR")}
+                  {msg.timestamp.toLocaleTimeString(
+                    msg.language === "en"
+                      ? "en-US"
+                      : msg.language === "ar"
+                      ? "ar-SA"
+                      : localStorage.getItem("selectedLanguage") === "en"
+                      ? "en-US"
+                      : localStorage.getItem("selectedLanguage") === "ar"
+                      ? "ar-SA"
+                      : "fr-FR"
+                  )}
                 </p>
               </div>
             </div>
@@ -1010,12 +1023,9 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-400 rounded-2xl p-6 shadow-xl">
             <h3 className="text-xl font-bold text-amber-900 mb-4 flex items-center">
               <Info className="w-6 h-6 mr-2" />
-              Validation de votre demande
+              {t("chat.validate_prompt")}
             </h3>
-            <p className="text-gray-700 mb-6">
-              Veuillez vérifier les informations ci-dessus et confirmer la
-              création de votre demande.
-            </p>
+            <p className="text-gray-700 mb-6">{t("chat.validate_hint")}</p>
             <div className="flex gap-4 justify-center">
               <button
                 onClick={handleConfirmTicket}
@@ -1023,7 +1033,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                 className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 <span className="text-2xl mr-2">✅</span>
-                Valider
+                {t("chat.btn_validate")}
               </button>
               <button
                 onClick={handleCancelTicket}
@@ -1031,7 +1041,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                 className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
                 <span className="text-2xl mr-2">❌</span>
-                Non
+                {t("chat.btn_modify")}
               </button>
             </div>
           </div>
