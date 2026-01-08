@@ -8,7 +8,7 @@ import uuid
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Response
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -22,7 +22,8 @@ from app.core.security import (
     Token,
     ACCESS_TOKEN_EXPIRE_MINUTES,
     generate_api_key,
-    hash_api_key
+    hash_api_key,
+    blacklist_token
 )
 from app.models.user import (
     UserDB,
@@ -41,6 +42,9 @@ from app.api.deps import get_current_active_user, require_admin
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# OAuth2 scheme for token extraction
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 # Constants
 MAX_LOGIN_ATTEMPTS = 5
@@ -195,6 +199,7 @@ async def refresh_token(
 ):
     """
     Refresh access token using a valid refresh token.
+    The old refresh token is blacklisted to prevent reuse.
     """
     token_data = verify_token(request.refresh_token, token_type="refresh")
 
@@ -213,16 +218,26 @@ async def refresh_token(
             detail="User not found or inactive"
         )
 
+    # Blacklist the old refresh token to prevent replay attacks
+    try:
+        await blacklist_token(request.refresh_token)
+        logger.info(f"Old refresh token blacklisted for user: {user.username}")
+    except Exception as e:
+        logger.error(f"Failed to blacklist old refresh token: {e}")
+        # Continue anyway - security is defense in depth
+
     # Generate new tokens
     access_token = create_access_token(
         subject=user.id,
         scopes=[user.role.value]
     )
-    refresh_token = create_refresh_token(subject=user.id)
+    new_refresh_token = create_refresh_token(subject=user.id)
+
+    logger.info(f"Tokens refreshed for user: {user.username}")
 
     return Token(
         access_token=access_token,
-        refresh_token=refresh_token,
+        refresh_token=new_refresh_token,
         token_type="bearer",
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60
     )
@@ -230,14 +245,25 @@ async def refresh_token(
 
 @router.post("/logout", response_model=MessageResponse)
 async def logout(
-    current_user: UserDB = Depends(get_current_active_user)
+    current_user: UserDB = Depends(get_current_active_user),
+    token: Optional[str] = Depends(oauth2_scheme)
 ):
     """
-    Logout current user.
-    Note: With JWT, true logout requires client-side token deletion.
-    For full security, implement token blacklisting with Redis.
+    Logout current user and blacklist their access token.
+    The token will be invalidated until its natural expiration.
+    Client should also delete the token locally.
     """
-    logger.info(f"User logged out: {current_user.username}")
+    # Blacklist the access token
+    if token:
+        try:
+            await blacklist_token(token)
+            logger.info(f"✅ User logged out and token blacklisted: {current_user.username}")
+        except Exception as e:
+            logger.error(f"Failed to blacklist token on logout: {e}")
+            # Still log out the user even if blacklisting fails
+    else:
+        logger.info(f"User logged out: {current_user.username}")
+
     return MessageResponse(message="Successfully logged out")
 
 

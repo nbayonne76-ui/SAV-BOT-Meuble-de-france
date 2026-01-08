@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
 from sqlalchemy.orm import Session
 
-from app.core.security import verify_token, TokenData, verify_api_key
+from app.core.security import verify_token_with_blacklist, TokenData, verify_api_key
 from app.db.session import get_db
 from app.models.user import UserDB, UserRole, UserStatus, APIKeyDB
 
@@ -33,10 +33,12 @@ async def get_current_user(
     """
     Get current authenticated user from JWT token or API key.
     Returns None if no authentication provided.
+    Checks token blacklist for revoked tokens.
     """
     # Try JWT token first
     if token:
-        token_data = verify_token(token, token_type="access")
+        # Verify token and check blacklist
+        token_data = await verify_token_with_blacklist(token, token_type="access")
         if token_data:
             user = db.query(UserDB).filter(UserDB.id == token_data.user_id).first()
             if user and user.status == UserStatus.ACTIVE:
