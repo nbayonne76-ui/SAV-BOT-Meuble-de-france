@@ -4,12 +4,13 @@ Chat endpoint with rate limiting and input validation
 """
 from fastapi import APIRouter, HTTPException, status, Request, Depends
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional
+from typing import List, Optional, Dict
 import logging
 import os
 import re
 import html
 from pathlib import Path
+from datetime import datetime, timedelta
 from app.services.chatbot import MeubledeFranceChatbot
 from app.core.config import settings
 from app.core.rate_limit import limiter, RateLimits
@@ -23,8 +24,38 @@ from sqlalchemy.orm import Session
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Global chatbot instance (in production, use Redis-based session management)
-chatbot_instances = {}
+# Global chatbot instances with timestamp tracking
+# Structure: {session_id: {"chatbot": MeubledeFranceChatbot, "last_used": datetime}}
+chatbot_instances: Dict[str, dict] = {}
+
+# Cleanup configuration
+SESSION_TTL_HOURS = 24  # Sessions older than 24 hours will be cleaned up
+CLEANUP_INTERVAL = 100  # Run cleanup every N requests
+request_counter = 0
+
+
+def cleanup_old_sessions(max_age_hours: int = SESSION_TTL_HOURS) -> int:
+    """
+    Remove chatbot sessions older than max_age_hours.
+
+    Returns:
+        Number of sessions cleaned up
+    """
+    cutoff = datetime.now() - timedelta(hours=max_age_hours)
+    to_remove = []
+
+    for session_id, data in chatbot_instances.items():
+        if data['last_used'] < cutoff:
+            to_remove.append(session_id)
+
+    for session_id in to_remove:
+        del chatbot_instances[session_id]
+        logger.info(f"🧹 Cleaned up inactive session: {session_id}")
+
+    if to_remove:
+        logger.info(f"🧹 Session cleanup: removed {len(to_remove)} inactive sessions, {len(chatbot_instances)} remaining")
+
+    return len(to_remove)
 
 
 class ChatRequest(BaseModel):
@@ -130,7 +161,15 @@ async def chat(
     Rate limited to 30 requests per minute.
     Authentication is optional but provides better session management.
     """
+    global request_counter
+
     try:
+        # Periodic cleanup of old sessions
+        request_counter += 1
+        if request_counter >= CLEANUP_INTERVAL:
+            request_counter = 0
+            cleanup_old_sessions()
+
         # Use user ID for session if authenticated
         session_id = chat_request.session_id
         if current_user:
@@ -143,14 +182,19 @@ async def chat(
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in configuration")
 
-        # Get or create chatbot instance
+        # Get or create chatbot instance with timestamp tracking
         if session_id not in chatbot_instances:
             logger.info(f"Creating new chatbot for session: {session_id}")
-            chatbot_instances[session_id] = MeubledeFranceChatbot(api_key=api_key)
+            chatbot_instances[session_id] = {
+                "chatbot": MeubledeFranceChatbot(api_key=api_key),
+                "last_used": datetime.now()
+            }
         else:
             logger.info(f"Using existing chatbot for session: {session_id}")
+            # Update last_used timestamp
+            chatbot_instances[session_id]["last_used"] = datetime.now()
 
-        chatbot = chatbot_instances[session_id]
+        chatbot = chatbot_instances[session_id]["chatbot"]
 
         # Auto-detect order number
         order_number = chat_request.order_number
@@ -234,7 +278,7 @@ async def clear_session(
 
     if full_session_id in chatbot_instances:
         del chatbot_instances[full_session_id]
-        logger.info(f"Session cleared: {full_session_id}")
+        logger.info(f"🗑️ Session cleared manually: {full_session_id}")
         return {"success": True, "message": "Session cleared"}
 
     return {"success": False, "message": "Session not found"}
@@ -348,9 +392,20 @@ async def cancel_ticket(
 async def get_session_count(request: Request):
     """
     Get the current number of active sessions.
-    Useful for monitoring.
+    Useful for monitoring memory usage.
     """
+    session_info = []
+    if settings.DEBUG:
+        for session_id, data in list(chatbot_instances.items())[:10]:
+            session_info.append({
+                "session_id": session_id,
+                "last_used": data["last_used"].isoformat(),
+                "age_hours": (datetime.now() - data["last_used"]).total_seconds() / 3600
+            })
+
     return {
         "active_sessions": len(chatbot_instances),
-        "session_ids": list(chatbot_instances.keys())[:10] if settings.DEBUG else []
+        "session_ttl_hours": SESSION_TTL_HOURS,
+        "cleanup_interval": CLEANUP_INTERVAL,
+        "sessions": session_info if settings.DEBUG else []
     }
