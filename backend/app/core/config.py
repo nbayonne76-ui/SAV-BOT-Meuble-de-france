@@ -54,6 +54,11 @@ class Settings:
         self.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
         self.REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
+        # HTTPS Enforcement
+        # In production (DEBUG=False), HTTPS is enforced by default
+        # Set ENFORCE_HTTPS=false to disable (not recommended)
+        self.ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "true" if not self.DEBUG else "false").lower() == "true"
+
         # ===================
         # Database Settings
         # ===================

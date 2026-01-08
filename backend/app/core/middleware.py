@@ -31,9 +31,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
 
-        # Only add strict transport security in production
+        # Strict Transport Security (HSTS) in production
+        # - max-age=63072000 (2 years) - tells browsers to always use HTTPS
+        # - includeSubDomains - applies to all subdomains
+        # - preload - eligible for browser preload lists
         if not settings.DEBUG:
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
 
         # Content Security Policy (relaxed for API)
         if not settings.DEBUG:
@@ -45,6 +48,16 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                 "font-src 'self' https:; "
                 "connect-src 'self' https:;"
             )
+
+        # Ensure Set-Cookie headers have Secure flag in production
+        if not settings.DEBUG:
+            set_cookie = response.headers.get("set-cookie")
+            if set_cookie and "Secure" not in set_cookie:
+                # Add Secure flag to cookies in production
+                if not set_cookie.endswith(";"):
+                    set_cookie += ";"
+                set_cookie += " Secure; HttpOnly; SameSite=Strict"
+                response.headers["set-cookie"] = set_cookie
 
         return response
 
@@ -126,6 +139,35 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    """
+    Middleware to redirect HTTP requests to HTTPS in production.
+    Only applies when ENFORCE_HTTPS is enabled.
+    """
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        # Skip redirect if HTTPS enforcement is disabled or already HTTPS
+        if not settings.ENFORCE_HTTPS:
+            return await call_next(request)
+
+        # Check if request is HTTP (not HTTPS)
+        # In production behind a proxy, check X-Forwarded-Proto header
+        forwarded_proto = request.headers.get("X-Forwarded-Proto", "")
+        is_https = (
+            request.url.scheme == "https" or
+            forwarded_proto.lower() == "https"
+        )
+
+        if not is_https:
+            # Redirect to HTTPS version
+            from fastapi.responses import RedirectResponse
+            https_url = str(request.url).replace("http://", "https://", 1)
+            logger.info(f"🔒 Redirecting HTTP to HTTPS: {request.url.path}")
+            return RedirectResponse(url=https_url, status_code=301)
+
+        return await call_next(request)
+
+
 class TrustedHostMiddleware:
     """
     Middleware to validate the Host header against trusted hosts.
@@ -169,6 +211,11 @@ def setup_security_middleware(app):
 
     # Security headers
     app.add_middleware(SecurityHeadersMiddleware)
+
+    # HTTPS redirect (only when enforced)
+    if settings.ENFORCE_HTTPS:
+        app.add_middleware(HTTPSRedirectMiddleware)
+        logger.info("🔒 HTTPS enforcement enabled - HTTP requests will be redirected")
 
     logger.info("Security middleware configured")
 
