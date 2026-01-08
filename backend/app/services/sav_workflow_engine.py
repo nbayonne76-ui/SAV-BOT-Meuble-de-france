@@ -16,6 +16,7 @@ from app.services.priority_scorer import priority_scorer
 from app.services.tone_analyzer import tone_analyzer, ToneAnalysis
 from app.services.client_summary_generator import client_summary_generator, ClientSummary
 from app.models.warranty import Warranty, WarrantyCheck
+from app.core.input_sanitizer import input_sanitizer
 
 logger = logging.getLogger(__name__)
 
@@ -176,10 +177,10 @@ class SAVWorkflowEngine:
                 else:
                     ticket_repository.create(self.db_session, ticket)
             except Exception as e:
-                logger.error(f"Erreur persistence ticket {ticket.ticket_id}: {e}")
+                logger.error(f"Erreur persistence ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {e}")
                 # Ne pas lever l'exception pour ne pas bloquer le workflow
         else:
-            logger.debug(f"Ticket {ticket.ticket_id} non persisté (pas de session DB)")
+            logger.debug(f"Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} non persisté (pas de session DB)")
 
     async def process_new_claim(
         self,
@@ -209,7 +210,20 @@ class SAVWorkflowEngine:
             SAVTicket créé et traité
         """
 
-        logger.info(f"🎫 Nouvelle réclamation SAV: {order_number}")
+        # 🛡️ SECURITY: Sanitize all inputs before processing
+        try:
+            customer_id = input_sanitizer.sanitize_customer_id(customer_id)
+            order_number = input_sanitizer.sanitize_order_number(order_number)
+            product_sku = input_sanitizer.sanitize_product_sku(product_sku)
+            product_name = input_sanitizer.sanitize_text(product_name, "product_name")
+            problem_description = input_sanitizer.sanitize_text(problem_description, "problem_description")
+            customer_tier = input_sanitizer.sanitize_text(customer_tier, "general_text")
+        except ValueError as e:
+            logger.error(f"❌ Input validation failed: {e}")
+            raise ValueError(f"Invalid input data: {e}")
+
+        # Log with sanitized order number
+        logger.info(f"🎫 Nouvelle réclamation SAV: {input_sanitizer.sanitize_for_logging(order_number)}")
 
         # 1. Créer le ticket
         ticket = await self._create_ticket(
@@ -257,12 +271,12 @@ class SAVWorkflowEngine:
         # Si validation requise, attendre la confirmation de l'utilisateur
         if not (ticket.client_summary and ticket.client_summary.validation_required):
             self._persist_ticket(ticket)
-            logger.info(f"✅ Ticket {ticket.ticket_id} persisté en base (pas de validation requise)")
+            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base (pas de validation requise)")
         else:
-            logger.info(f"⏳ Ticket {ticket.ticket_id} en attente de validation utilisateur (non persisté)")
+            logger.info(f"⏳ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} en attente de validation utilisateur (non persisté)")
 
         logger.info(
-            f"✅ Ticket {ticket.ticket_id} traité: "
+            f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} traité: "
             f"{ticket.status} | Priorité: {ticket.priority} | "
             f"Auto-résolu: {ticket.auto_resolved} | "
             f"Validation requise: {ticket.client_summary.validation_required if ticket.client_summary else False}"
@@ -303,7 +317,7 @@ class SAVWorkflowEngine:
             description="Ticket SAV créé automatiquement"
         ))
 
-        logger.info(f"📝 Ticket créé: {ticket_id}")
+        logger.info(f"📝 Ticket créé: {input_sanitizer.sanitize_for_logging(ticket_id)}")
         return ticket
 
     async def _analyze_problem(
@@ -338,7 +352,7 @@ class SAVWorkflowEngine:
         ))
 
         logger.info(
-            f"🔍 Problème analysé pour {ticket.ticket_id}: "
+            f"🔍 Problème analysé pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: "
             f"{detection_result.primary_category} | {detection_result.severity}"
         )
 
@@ -379,7 +393,7 @@ class SAVWorkflowEngine:
         ))
 
         logger.info(
-            f"🔒 Garantie vérifiée pour {ticket.ticket_id}: "
+            f"🔒 Garantie vérifiée pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: "
             f"{'✅ Couvert' if warranty_check.is_covered else '❌ Non couvert'}"
         )
 
@@ -430,7 +444,7 @@ class SAVWorkflowEngine:
         ))
 
         logger.info(
-            f"📊 Priorité calculée pour {ticket.ticket_id}: "
+            f"📊 Priorité calculée pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: "
             f"{priority_result.priority} (score: {priority_result.total_score})"
         )
 
@@ -478,7 +492,7 @@ class SAVWorkflowEngine:
             metadata=requirements
         ))
 
-        logger.info(f"📸 Preuves requises pour {ticket.ticket_id}: {requirements['description']}")
+        logger.info(f"📸 Preuves requises pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {requirements['description']}")
 
         return ticket
 
@@ -581,7 +595,7 @@ class SAVWorkflowEngine:
         ticket.time_to_resolution = datetime.now() - ticket.created_at
 
         logger.info(
-            f"✅ Auto-résolution pour {ticket.ticket_id}: {ticket.resolution_type} "
+            f"✅ Auto-résolution pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {ticket.resolution_type} "
             f"(temps: {ticket.time_to_resolution})"
         )
 
@@ -608,7 +622,7 @@ class SAVWorkflowEngine:
         ))
 
         logger.warning(
-            f"⚠️  Escalade humaine pour {ticket.ticket_id}: "
+            f"⚠️  Escalade humaine pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: "
             f"Priorité {ticket.priority} | Score {ticket.priority_score}"
         )
 
@@ -633,7 +647,7 @@ class SAVWorkflowEngine:
             }
         ))
 
-        logger.info(f"👷 Ticket {ticket.ticket_id} assigné à technicien")
+        logger.info(f"👷 Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} assigné à technicien")
 
         return ticket
 
@@ -645,6 +659,16 @@ class SAVWorkflowEngine:
         description: str
     ) -> SAVTicket:
         """Ajoute une preuve au ticket"""
+
+        # 🛡️ SECURITY: Sanitize all inputs before processing
+        try:
+            ticket_id = input_sanitizer.sanitize_text(ticket_id, "ticket_id")
+            evidence_type = input_sanitizer.sanitize_text(evidence_type, "general_text")
+            evidence_url = input_sanitizer.sanitize_url(evidence_url)
+            description = input_sanitizer.sanitize_text(description, "evidence_description")
+        except ValueError as e:
+            logger.error(f"❌ Evidence validation failed: {e}")
+            raise ValueError(f"Invalid evidence data: {e}")
 
         if ticket_id not in self.active_tickets:
             raise ValueError(f"Ticket {ticket_id} non trouvé")
@@ -674,7 +698,7 @@ class SAVWorkflowEngine:
 
         if photo_count >= min_photos and (not require_video or video_count > 0):
             ticket.evidence_complete = True
-            logger.info(f"✅ Preuves complètes pour {ticket_id}")
+            logger.info(f"✅ Preuves complètes pour {input_sanitizer.sanitize_for_logging(ticket_id)}")
 
         ticket.updated_at = datetime.now()
 
@@ -723,7 +747,7 @@ class SAVWorkflowEngine:
         ))
 
         logger.info(
-            f"🎭 Ton analysé pour {ticket.ticket_id}: {tone_analysis.tone} | "
+            f"🎭 Ton analysé pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {tone_analysis.tone} | "
             f"Urgence: {tone_analysis.urgency} | Empathie requise: {tone_analysis.requires_human_empathy}"
         )
 
@@ -797,7 +821,7 @@ class SAVWorkflowEngine:
         ))
 
         logger.info(
-            f"📧 Récapitulatif généré pour {ticket.ticket_id}: {client_summary.summary_id} | "
+            f"📧 Récapitulatif généré pour {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {client_summary.summary_id} | "
             f"Validation requise: {client_summary.validation_required}"
         )
 
@@ -834,8 +858,8 @@ class SAVWorkflowEngine:
             Dict avec le statut de validation
         """
         if ticket_id not in self.active_tickets:
-            logger.error(f"❌ Ticket {ticket_id} non trouvé pour validation")
-            return {"success": False, "error": f"Ticket {ticket_id} non trouvé"}
+            logger.error(f"❌ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé pour validation")
+            return {"success": False, "error": f"Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé"}
 
         ticket = self.active_tickets[ticket_id]
 
@@ -856,7 +880,7 @@ class SAVWorkflowEngine:
         # Persister en base de données
         self._persist_ticket(ticket)
 
-        logger.info(f"✅ Ticket {ticket_id} validé et persisté en base de données")
+        logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} validé et persisté en base de données")
 
         return {
             "success": True,
@@ -876,8 +900,8 @@ class SAVWorkflowEngine:
             Dict avec le statut d'annulation
         """
         if ticket_id not in self.active_tickets:
-            logger.error(f"❌ Ticket {ticket_id} non trouvé pour annulation")
-            return {"success": False, "error": f"Ticket {ticket_id} non trouvé"}
+            logger.error(f"❌ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé pour annulation")
+            return {"success": False, "error": f"Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé"}
 
         ticket = self.active_tickets[ticket_id]
 
@@ -899,7 +923,7 @@ class SAVWorkflowEngine:
         # Retirer de la liste active
         del self.active_tickets[ticket_id]
 
-        logger.info(f"❌ Ticket {ticket_id} annulé par le client")
+        logger.info(f"❌ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} annulé par le client")
 
         return {
             "success": True,
