@@ -122,6 +122,25 @@ class Settings:
                 "Please set it in your .env file."
             )
 
+        # Validate OpenAI API key format
+        openai_key = self.OPENAI_API_KEY.strip()
+        if not openai_key.startswith("sk-"):
+            raise ValueError(
+                "[ERROR] Invalid OPENAI_API_KEY format! "
+                "OpenAI API keys must start with 'sk-' (secret key) or 'sk-proj-' (project key). "
+                "Please check your API key at https://platform.openai.com/api-keys"
+            )
+
+        # Validate key length (OpenAI keys are typically 51+ characters)
+        if len(openai_key) < 20:
+            raise ValueError(
+                "[ERROR] OPENAI_API_KEY appears to be too short! "
+                "Valid OpenAI API keys are typically 51+ characters. "
+                "Please verify your API key."
+            )
+
+        self.OPENAI_API_KEY = openai_key
+
         # ===================
         # Upload Settings
         # ===================
