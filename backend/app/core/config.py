@@ -159,6 +159,16 @@ class Settings:
         )
 
         # ===================
+        # Request Limits (DoS Prevention)
+        # ===================
+        # Maximum request body size for JSON/form data (5MB)
+        self.MAX_REQUEST_SIZE = int(os.getenv("MAX_REQUEST_SIZE", "5242880"))  # 5MB
+        # Request timeout in seconds (30s)
+        self.REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
+        # Maximum concurrent requests per IP (100)
+        self.MAX_CONCURRENT_REQUESTS = int(os.getenv("MAX_CONCURRENT_REQUESTS", "100"))
+
+        # ===================
         # Cloudinary Settings
         # ===================
         self.CLOUDINARY_CLOUD_NAME = os.getenv("CLOUDINARY_CLOUD_NAME")

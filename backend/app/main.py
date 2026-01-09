@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.core.logging import setup_logging
 from app.core.middleware import setup_security_middleware
 from app.core.rate_limit import setup_rate_limiter
+from app.core.request_limits import setup_request_limits
 from app.core.redis import CacheManager
 from app.core.circuit_breaker import get_circuit_stats
 from app.db.session import init_db, close_db
@@ -163,6 +164,9 @@ app = FastAPI(
 
 # Setup rate limiter
 setup_rate_limiter(app)
+
+# Setup request limits (size and timeout)
+setup_request_limits(app)
 
 # Setup security middleware
 setup_security_middleware(app)
