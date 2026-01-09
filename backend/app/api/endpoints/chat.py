@@ -324,7 +324,7 @@ async def validate_ticket(
         sav_workflow_engine.db_session = db
 
         # Validate the ticket
-        result = sav_workflow_engine.validate_ticket(ticket_id)
+        result = await sav_workflow_engine.validate_ticket(ticket_id)
 
         if not result.get("success"):
             raise HTTPException(
