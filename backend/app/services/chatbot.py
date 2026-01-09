@@ -362,7 +362,8 @@ PRODUCTS AVAILABLE:
     async def chat(self, user_message: str,
                    order_number: Optional[str] = None,
                    photos: Optional[List[str]] = None,
-                   db_session=None) -> Dict:
+                   db_session=None,
+                   preferred_language: Optional[str] = None) -> Dict:
         """
         Gère la conversation avec le client
 
@@ -379,8 +380,8 @@ PRODUCTS AVAILABLE:
             # Do not store request-scoped DB sessions on the chatbot instance (avoid stale/long-lived sessions).
             # Pass `db_session` explicitly to methods that need it.
 
-            # Détection langue
-            language = self.detect_language(user_message)
+            # Détection langue (allow override via `preferred_language`)
+            language = preferred_language or self.detect_language(user_message)
 
             # 🎯 NOUVEAU: Détection automatique du produit mentionné
             detected_product = self.detect_product_mention(user_message)

@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Eye, AlertCircle, Clock, CheckCircle, FileText } from "lucide-react";
 import { getPriorityColor, getStatusLabel, formatDate } from "../utils/format";
+import { useLanguage } from "../context/LanguageContext";
 
 interface TicketRowProps {
   ticket: {
@@ -34,13 +35,14 @@ const getStatusIcon = (status: String) => {
 };
 
 const TicketRow = memo(({ ticket, onViewDossier }: TicketRowProps) => {
+  const { t } = useLanguage();
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 text-sm font-medium text-gray-900">
         {ticket.ticket_id}
       </td>
       <td className="px-6 py-4 text-sm text-gray-600">
-        <div>{ticket.customer_name || "Client"}</div>
+        <div>{ticket.customer_name || t("dashboard.columns.client")}</div>
         <div className="text-xs text-gray-400">{ticket.order_number}</div>
       </td>
       <td className="px-6 py-4 text-sm text-gray-600">
@@ -95,7 +97,7 @@ const TicketRow = memo(({ ticket, onViewDossier }: TicketRowProps) => {
         <button
           onClick={() => onViewDossier(ticket.ticket_id)}
           className="text-blue-600 hover:text-blue-800"
-          title="Voir le dossier"
+          title={t("dashboard.view_dossier")}
         >
           <Eye className="w-5 h-5" />
         </button>

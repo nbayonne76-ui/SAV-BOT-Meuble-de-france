@@ -64,6 +64,7 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = Field("default", max_length=100)
     order_number: Optional[str] = Field(None, max_length=50)
     photos: Optional[List[str]] = Field(default_factory=list)
+    language: Optional[str] = Field(None, max_length=10)
 
     @validator('message')
     def sanitize_message(cls, v):
@@ -104,6 +105,17 @@ class ChatRequest(BaseModel):
         """Validate photo paths"""
         if v and len(v) > 10:
             raise ValueError('Maximum 10 photos allowed')
+        return v
+
+    @validator('language')
+    def validate_language(cls, v):
+        """Validate and normalize language codes (e.g. 'en', 'fr', 'ar')"""
+        if v:
+            v_clean = v.strip().lower()
+            # Basic sanity check: allow 2-letter codes and optional region (e.g. en-US)
+            if not re.match(r'^[a-z]{2}(-[A-Za-z]{2,4})?$', v_clean):
+                raise ValueError('Invalid language code')
+            return v_clean
         return v
 
 
@@ -208,14 +220,15 @@ async def chat(
             user_message=chat_request.message,
             order_number=order_number,
             photos=chat_request.photos,
-            db_session=db
+            db_session=db,
+            preferred_language=chat_request.language
         )
 
         if "error" in result:
             logger.error(f"Chatbot error: {result['error']}")
             return ChatResponse(
                 response=result["response"],
-                language=result.get("language", "fr"),
+                language=result.get("language") or chat_request.language or "en",
                 conversation_type=result.get("conversation_type", "general"),
                 session_id=session_id
             )
@@ -227,7 +240,7 @@ async def chat(
 
         return ChatResponse(
             response=result["response"],
-            language=result.get("language", "fr"),
+            language=result.get("language") or chat_request.language or "en",
             conversation_type=result.get("conversation_type", "general"),
             session_id=session_id,
             requires_validation=requires_validation,
