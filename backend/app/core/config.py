@@ -101,6 +101,10 @@ class Settings:
                 "Please configure a PostgreSQL DATABASE_URL."
             )
 
+        # Slow Query Logging (Performance Monitoring)
+        # Log queries that take longer than this threshold (in milliseconds)
+        self.SLOW_QUERY_THRESHOLD_MS = int(os.getenv("SLOW_QUERY_THRESHOLD_MS", "1000"))  # 1 second
+
         # ===================
         # Redis Settings
         # ===================

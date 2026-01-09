@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool, NullPool
 from typing import AsyncGenerator
 
 from app.core.config import settings
+from app.core.slow_query_logger import setup_slow_query_logging
 
 # Create async engine based on database URL
 # Convert sync URLs to async variants
@@ -78,6 +79,9 @@ async def init_db():
     """
     from app.models.user import Base as UserBase
     from app.models.ticket import Base as TicketBase
+
+    # Setup slow query logging for performance monitoring
+    setup_slow_query_logging(engine)
 
     # Create all tables asynchronously
     async with engine.begin() as conn:

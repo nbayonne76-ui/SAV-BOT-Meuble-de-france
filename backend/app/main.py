@@ -14,6 +14,7 @@ import asyncio
 import signal
 from pathlib import Path
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 from app.core.config import settings
 from app.core.logging import setup_logging
@@ -22,6 +23,7 @@ from app.core.rate_limit import setup_rate_limiter
 from app.core.request_limits import setup_request_limits
 from app.core.redis import CacheManager
 from app.core.circuit_breaker import get_circuit_stats
+from app.core.slow_query_logger import get_query_stats
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
@@ -435,6 +437,30 @@ async def circuit_breaker_status():
             "open": sum(1 for b in stats.values() if b["state"] == "open"),
             "half_open": sum(1 for b in stats.values() if b["state"] == "half_open")
         }
+    }
+
+
+@app.get("/query-stats", tags=["Health"])
+async def query_statistics():
+    """
+    Database query performance statistics.
+    Returns metrics on query execution times and slow query detection.
+    """
+    stats = get_query_stats()
+
+    # Determine if performance is concerning
+    slow_query_percentage = stats.get("slow_query_percentage", 0)
+    performance_status = "good"
+
+    if slow_query_percentage > 10:
+        performance_status = "critical"
+    elif slow_query_percentage > 5:
+        performance_status = "warning"
+
+    return {
+        "performance_status": performance_status,
+        "stats": stats,
+        "timestamp": datetime.now().isoformat()
     }
 
 
