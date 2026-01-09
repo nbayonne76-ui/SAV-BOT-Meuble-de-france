@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import uvicorn
 import logging
+import time
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -178,53 +179,175 @@ async def root():
 @app.get("/health", tags=["Health"])
 async def health_check():
     """
-    Health check endpoint for load balancers and monitoring.
-    Returns basic health status.
+    Basic health check endpoint for load balancers.
+    Simple liveness probe - returns 200 if app is running.
+    For detailed checks, use /ready endpoint.
     """
+    import psutil
+    import os
+
+    # Get process info
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
-        "version": settings.APP_VERSION
+        "version": settings.APP_VERSION,
+        "uptime_seconds": round(time.time() - process.create_time(), 2),
+        "memory_mb": round(memory_info.rss / 1024 / 1024, 2),
+        "cpu_percent": process.cpu_percent(),
+        "threads": process.num_threads()
     }
 
 
 @app.get("/ready", tags=["Health"])
 async def readiness_check():
     """
-    Readiness check endpoint.
-    Verifies all dependencies are available.
+    Comprehensive readiness check endpoint.
+    Verifies all dependencies are available with detailed status.
     """
+    import time
     from app.core.redis import CacheManager
+    from app.core.circuit_breaker import get_circuit_stats
+
+    checks = {}
 
     # Check database
+    db_start = time.time()
     db_ready = True
+    db_error = None
     try:
         from sqlalchemy import text
         from app.db.session import engine
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
-    except Exception:
+    except Exception as e:
         db_ready = False
+        db_error = str(e)
+    db_time = round((time.time() - db_start) * 1000, 2)
+
+    checks["database"] = {
+        "healthy": db_ready,
+        "response_time_ms": db_time,
+        "error": db_error
+    }
 
     # Check cache (Redis or memory)
+    cache_start = time.time()
     cache_ready = False
+    cache_error = None
+    cache_type = "unknown"
     try:
         cache = CacheManager.get_cache()
         cache_ready = await cache.ping()
-    except Exception:
+        cache_type = "redis" if not settings.REDIS_URL.startswith("memory") else "memory"
+    except Exception as e:
         cache_ready = False
+        cache_error = str(e)
+    cache_time = round((time.time() - cache_start) * 1000, 2)
 
-    checks = {
-        "database": db_ready,
-        "cache": cache_ready,
-        "uploads_dir": Path(settings.UPLOAD_DIR).exists()
+    checks["cache"] = {
+        "healthy": cache_ready,
+        "type": cache_type,
+        "response_time_ms": cache_time,
+        "error": cache_error
     }
 
-    all_ready = all(checks.values())
+    # Check uploads directory
+    uploads_exists = Path(settings.UPLOAD_DIR).exists()
+    uploads_writable = False
+    try:
+        if uploads_exists:
+            test_file = Path(settings.UPLOAD_DIR) / ".health_check"
+            test_file.touch()
+            test_file.unlink()
+            uploads_writable = True
+    except Exception as e:
+        uploads_writable = False
+
+    checks["uploads_directory"] = {
+        "healthy": uploads_exists and uploads_writable,
+        "exists": uploads_exists,
+        "writable": uploads_writable,
+        "path": str(settings.UPLOAD_DIR)
+    }
+
+    # Check OpenAI API (via circuit breaker stats)
+    circuit_stats = get_circuit_stats()
+    openai_healthy = True
+    openai_breakers = ["openai", "openai-whisper", "openai-chat", "openai-tts"]
+
+    openai_status = {}
+    for breaker_name in openai_breakers:
+        if breaker_name in circuit_stats:
+            breaker = circuit_stats[breaker_name]
+            is_healthy = breaker["state"] == "closed"
+            openai_healthy = openai_healthy and is_healthy
+            openai_status[breaker_name] = {
+                "state": breaker["state"],
+                "success_rate": breaker["success_rate"],
+                "total_calls": breaker["total_calls"]
+            }
+
+    checks["openai_api"] = {
+        "healthy": openai_healthy,
+        "breakers": openai_status,
+        "configured": bool(settings.OPENAI_API_KEY)
+    }
+
+    # Check Cloudinary (if configured)
+    if settings.USE_CLOUDINARY:
+        cloudinary_healthy = True
+        cloudinary_status = {}
+
+        if "cloudinary" in circuit_stats:
+            breaker = circuit_stats["cloudinary"]
+            cloudinary_healthy = breaker["state"] == "closed"
+            cloudinary_status = {
+                "state": breaker["state"],
+                "success_rate": breaker["success_rate"],
+                "total_calls": breaker["total_calls"]
+            }
+
+        checks["cloudinary"] = {
+            "healthy": cloudinary_healthy,
+            "breaker": cloudinary_status,
+            "configured": True,
+            "cloud_name": settings.CLOUDINARY_CLOUD_NAME
+        }
+    else:
+        checks["cloudinary"] = {
+            "healthy": True,  # Not required if not configured
+            "configured": False,
+            "message": "Cloudinary not configured - using local storage"
+        }
+
+    # Check circuit breakers overall health
+    all_breakers_healthy = all(
+        breaker["state"] == "closed"
+        for breaker in circuit_stats.values()
+    )
+
+    checks["circuit_breakers"] = {
+        "healthy": all_breakers_healthy,
+        "total": len(circuit_stats),
+        "open": sum(1 for b in circuit_stats.values() if b["state"] == "open"),
+        "half_open": sum(1 for b in circuit_stats.values() if b["state"] == "half_open")
+    }
+
+    # Calculate overall readiness
+    critical_checks = ["database", "cache", "uploads_directory"]
+    critical_ready = all(checks[key]["healthy"] for key in critical_checks)
+
+    # External services are important but not critical for startup
+    all_ready = critical_ready and all_breakers_healthy
 
     return {
         "ready": all_ready,
-        "checks": checks
+        "critical_ready": critical_ready,  # Can start if critical services are up
+        "checks": checks,
+        "timestamp": datetime.now().isoformat()
     }
 
 
