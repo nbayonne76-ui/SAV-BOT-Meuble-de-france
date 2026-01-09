@@ -24,6 +24,7 @@ from app.core.request_limits import setup_request_limits
 from app.core.redis import CacheManager
 from app.core.circuit_breaker import get_circuit_stats
 from app.core.slow_query_logger import get_query_stats
+from app.core.memory_monitor import get_memory_status, get_memory_usage, trigger_garbage_collection
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
@@ -253,12 +254,16 @@ async def health_check():
     process = psutil.Process(os.getpid())
     memory_info = process.memory_info()
 
+    # Check memory status
+    memory_status = get_memory_status()
+
     return {
         "status": "healthy",
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION,
         "uptime_seconds": round(time.time() - process.create_time(), 2),
         "memory_mb": round(memory_info.rss / 1024 / 1024, 2),
+        "memory_status": memory_status["status"],  # ok, warning, critical
         "cpu_percent": process.cpu_percent(),
         "threads": process.num_threads()
     }
@@ -399,12 +404,26 @@ async def readiness_check():
         "half_open": sum(1 for b in circuit_stats.values() if b["state"] == "half_open")
     }
 
+    # Check memory usage
+    memory_status = get_memory_status()
+    memory_healthy = memory_status["status"] != "critical"
+
+    checks["memory"] = {
+        "healthy": memory_healthy,
+        "status": memory_status["status"],
+        "rss_mb": memory_status["usage"]["process"]["rss_mb"],
+        "percent_of_system": memory_status["usage"]["process"]["percent_of_system"],
+        "alert_level": memory_status["alert_level"],
+        "messages": memory_status["messages"] if memory_status["messages"] else None
+    }
+
     # Calculate overall readiness
     critical_checks = ["database", "cache", "uploads_directory"]
     critical_ready = all(checks[key]["healthy"] for key in critical_checks)
 
-    # External services are important but not critical for startup
-    all_ready = critical_ready and all_breakers_healthy
+    # External services and memory are important but not critical for startup
+    # Memory warning is ok, but critical memory should prevent readiness
+    all_ready = critical_ready and all_breakers_healthy and memory_healthy
 
     return {
         "ready": all_ready,
@@ -460,6 +479,46 @@ async def query_statistics():
     return {
         "performance_status": performance_status,
         "stats": stats,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/memory", tags=["Health"])
+async def memory_status():
+    """
+    Memory usage monitoring endpoint.
+    Returns current memory usage with threshold checks and alerts.
+    """
+    status = get_memory_status()
+    return {
+        **status,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/memory/usage", tags=["Health"])
+async def memory_usage_detail():
+    """
+    Detailed memory usage without threshold checks.
+    Returns process and system memory metrics.
+    """
+    usage = get_memory_usage()
+    return {
+        "usage": usage,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/memory/gc", tags=["Health"])
+async def garbage_collect():
+    """
+    Manually trigger garbage collection.
+    Useful for freeing memory when approaching thresholds.
+    """
+    result = trigger_garbage_collection()
+    return {
+        "success": True,
+        "gc_result": result,
         "timestamp": datetime.now().isoformat()
     }
 

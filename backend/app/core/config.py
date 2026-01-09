@@ -105,6 +105,14 @@ class Settings:
         # Log queries that take longer than this threshold (in milliseconds)
         self.SLOW_QUERY_THRESHOLD_MS = int(os.getenv("SLOW_QUERY_THRESHOLD_MS", "1000"))  # 1 second
 
+        # Memory Usage Alerting Thresholds
+        # Memory usage thresholds in MB for alerting
+        self.MEMORY_WARNING_THRESHOLD_MB = int(os.getenv("MEMORY_WARNING_THRESHOLD_MB", "500"))  # 500 MB
+        self.MEMORY_CRITICAL_THRESHOLD_MB = int(os.getenv("MEMORY_CRITICAL_THRESHOLD_MB", "1000"))  # 1 GB
+        # Memory usage percentage thresholds (relative to system memory)
+        self.MEMORY_WARNING_PERCENT = int(os.getenv("MEMORY_WARNING_PERCENT", "70"))  # 70%
+        self.MEMORY_CRITICAL_PERCENT = int(os.getenv("MEMORY_CRITICAL_PERCENT", "85"))  # 85%
+
         # ===================
         # Redis Settings
         # ===================
