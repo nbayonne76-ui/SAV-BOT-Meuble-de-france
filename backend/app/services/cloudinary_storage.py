@@ -11,6 +11,7 @@ import asyncio
 from functools import partial
 
 from app.core.config import settings
+from app.core.circuit_breaker import CircuitBreakerManager, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -73,32 +74,54 @@ class CloudinaryService:
             raise Exception("Cloudinary not configured")
 
         try:
-            # Upload to Cloudinary in a thread pool to avoid blocking
+            # Upload to Cloudinary in a thread pool with circuit breaker protection
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                partial(
-                    cloudinary.uploader.upload,
-                    file_path,
-                    folder=folder,
-                    public_id=public_id,
-                    resource_type=resource_type,
-                    unique_filename=True if not public_id else False,
-                    overwrite=False
-                )
+
+            # Get circuit breaker for Cloudinary
+            cloudinary_breaker = CircuitBreakerManager.get_breaker(
+                name="cloudinary",
+                failure_threshold=5,
+                recovery_timeout=60,
+                timeout=30
             )
 
-            logger.info(f"File uploaded to Cloudinary: {result.get('public_id')}")
+            async def upload_to_cloudinary():
+                return await loop.run_in_executor(
+                    None,
+                    partial(
+                        cloudinary.uploader.upload,
+                        file_path,
+                        folder=folder,
+                        public_id=public_id,
+                        resource_type=resource_type,
+                        unique_filename=True if not public_id else False,
+                        overwrite=False
+                    )
+                )
 
-            return {
-                "url": result.get("secure_url"),
-                "public_id": result.get("public_id"),
-                "format": result.get("format"),
-                "resource_type": result.get("resource_type"),
-                "size": result.get("bytes"),
-                "width": result.get("width"),
-                "height": result.get("height")
-            }
+            try:
+                result = await cloudinary_breaker.call(upload_to_cloudinary)
+
+                secure_url = result.get("secure_url")
+                logger.info(f"File uploaded to Cloudinary: {result.get('public_id')}")
+                logger.info(f"Cloudinary URL: {secure_url}")
+
+                return {
+                    "url": secure_url,
+                    "public_id": result.get("public_id"),
+                    "format": result.get("format"),
+                    "resource_type": result.get("resource_type"),
+                    "size": result.get("bytes"),
+                    "width": result.get("width"),
+                    "height": result.get("height")
+                }
+
+            except CircuitBreakerError as e:
+                logger.error(f"Cloudinary circuit breaker is open: {e}")
+                raise Exception(
+                    "Service de stockage d'images temporairement indisponible. "
+                    "Veuillez réessayer dans quelques instants."
+                )
 
         except Exception as e:
             logger.error(f"Cloudinary upload failed: {str(e)}")
@@ -123,24 +146,41 @@ class CloudinaryService:
             return False
 
         try:
-            # Run synchronous Cloudinary delete in thread pool
+            # Run synchronous Cloudinary delete in thread pool with circuit breaker
             loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(
-                None,
-                partial(
-                    cloudinary.uploader.destroy,
-                    public_id,
-                    resource_type=resource_type
-                )
+
+            # Get circuit breaker for Cloudinary
+            cloudinary_breaker = CircuitBreakerManager.get_breaker(
+                name="cloudinary",
+                failure_threshold=5,
+                recovery_timeout=60,
+                timeout=30
             )
 
-            success = result.get("result") == "ok"
-            if success:
-                logger.info(f"File deleted from Cloudinary: {public_id}")
-            else:
-                logger.warning(f"Failed to delete file from Cloudinary: {public_id}")
+            async def delete_from_cloudinary():
+                return await loop.run_in_executor(
+                    None,
+                    partial(
+                        cloudinary.uploader.destroy,
+                        public_id,
+                        resource_type=resource_type
+                    )
+                )
 
-            return success
+            try:
+                result = await cloudinary_breaker.call(delete_from_cloudinary)
+
+                success = result.get("result") == "ok"
+                if success:
+                    logger.info(f"File deleted from Cloudinary: {public_id}")
+                else:
+                    logger.warning(f"Failed to delete file from Cloudinary: {public_id}")
+
+                return success
+
+            except CircuitBreakerError as e:
+                logger.error(f"Cloudinary circuit breaker is open: {e}")
+                return False
 
         except Exception as e:
             logger.error(f"Cloudinary deletion failed: {str(e)}")

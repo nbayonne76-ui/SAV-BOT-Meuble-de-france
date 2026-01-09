@@ -218,6 +218,7 @@ class WarrantyCheck(BaseModel):
     exclusions_apply: List[str] = Field(default_factory=list)
     reason: Optional[str] = None
     recommendation: Optional[str] = None
+    warranty_start_date: Optional[datetime] = None
 
     class Config:
         json_schema_extra = {
@@ -229,6 +230,7 @@ class WarrantyCheck(BaseModel):
                 "days_remaining": 456,
                 "exclusions_apply": [],
                 "reason": "Garantie active, composant couvert",
+                "warranty_start_date": datetime.now(),
                 "recommendation": "Eligible pour remplacement gratuit"
             }
         }

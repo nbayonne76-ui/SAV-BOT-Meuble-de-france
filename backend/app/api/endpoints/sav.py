@@ -3,15 +3,18 @@
 Endpoints API pour le système SAV automatisé
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.sav_workflow_engine import sav_workflow_engine, SAVTicket
 from app.services.evidence_collector import evidence_collector, EvidenceType
 from app.services.warranty_service import warranty_service
 from app.models.warranty import Warranty, WarrantyType
+from app.db.session import get_db
+from app.repositories.ticket_repository import ticket_repository
 
 import logging
 
@@ -53,16 +56,16 @@ class TicketStatusRequest(BaseModel):
 # ============ ENDPOINTS ============
 
 @router.post("/create-claim")
-async def create_claim(request: CreateClaimRequest):
+async def create_claim(request: CreateClaimRequest, db: AsyncSession = Depends(get_db)):
     """
-    Crée une nouvelle réclamation SAV et lance le workflow automatique
+    Crée une nouvelle réclamation SAV et lance le workflow automatique (avec persistence DB)
 
     Returns:
         Ticket SAV créé avec analyse complète
     """
 
     try:
-        logger.info(f"📥 Nouvelle réclamation SAV: {request.order_number}")
+        logger.info(f"Nouvelle réclamation SAV: {request.order_number}")
 
         # Parser les dates
         purchase_date = datetime.fromisoformat(request.purchase_date.replace('Z', '+00:00'))
@@ -80,8 +83,12 @@ async def create_claim(request: CreateClaimRequest):
             warranty_type=WarrantyType.STANDARD
         )
 
+        # Créer workflow engine avec session DB pour persistence
+        from app.services.sav_workflow_engine import SAVWorkflowEngine
+        workflow_with_db = SAVWorkflowEngine(db_session=db)
+
         # Lancer le workflow SAV
-        ticket = await sav_workflow_engine.process_new_claim(
+        ticket = await workflow_with_db.process_new_claim(
             customer_id=request.customer_id,
             order_number=request.order_number,
             product_sku=request.product_sku,
@@ -122,12 +129,12 @@ async def create_claim(request: CreateClaimRequest):
             "next_steps": _generate_next_steps(ticket)
         }
 
-        logger.info(f"✅ Réclamation traitée: {ticket.ticket_id} | {ticket.status}")
+        logger.info(f"Réclamation traitée: {ticket.ticket_id} | {ticket.status}")
 
         return response
 
     except Exception as e:
-        logger.error(f"❌ Erreur création réclamation: {str(e)}")
+        logger.error(f"Erreur création réclamation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de la création: {str(e)}")
 
 
@@ -141,7 +148,7 @@ async def add_evidence(request: AddEvidenceRequest):
     """
 
     try:
-        logger.info(f"📸 Ajout preuve pour ticket: {request.ticket_id}")
+        logger.info(f"Ajout preuve pour ticket: {request.ticket_id}")
 
         # Analyser la qualité de la preuve
         evidence_analysis = evidence_collector.analyze_evidence(
@@ -196,7 +203,7 @@ async def add_evidence(request: AddEvidenceRequest):
         }
 
         logger.info(
-            f"✅ Preuve ajoutée: {evidence_analysis.quality} | "
+            f"Preuve ajoutée: {evidence_analysis.quality} | "
             f"Complétude: {completeness.completeness_score:.0f}%"
         )
 
@@ -205,7 +212,7 @@ async def add_evidence(request: AddEvidenceRequest):
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        logger.error(f"❌ Erreur ajout preuve: {str(e)}")
+        logger.error(f"Erreur ajout preuve: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur lors de l'ajout: {str(e)}")
 
 
@@ -232,7 +239,7 @@ async def get_ticket_status(ticket_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erreur récupération ticket: {str(e)}")
+        logger.error(f"Erreur récupération ticket: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
@@ -270,7 +277,7 @@ async def get_ticket_history(ticket_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erreur récupération historique: {str(e)}")
+        logger.error(f"Erreur récupération historique: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
@@ -301,50 +308,53 @@ async def get_evidence_requirements(problem_category: str, priority: str = "P2")
         }
 
     except Exception as e:
-        logger.error(f"❌ Erreur récupération exigences: {str(e)}")
+        logger.error(f"Erreur récupération exigences: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
 @router.get("/tickets")
-async def get_all_tickets():
+async def get_all_tickets(db: AsyncSession = Depends(get_db)):
     """
-    📊 NOUVEAU: Récupère tous les tickets SAV pour le tableau de bord
+    NOUVEAU: Récupère tous les tickets SAV pour le tableau de bord (depuis la base de données)
 
     Returns:
         Liste de tous les tickets avec leurs détails
     """
 
     try:
-        logger.info("📊 Récupération de tous les tickets SAV")
+        logger.info("Récupération de tous les tickets SAV depuis la base de données")
+
+        # Récupérer les tickets depuis la base de données
+        db_tickets = await ticket_repository.get_all(db, limit=100)
 
         tickets_list = []
 
-        for ticket_id, ticket in sav_workflow_engine.active_tickets.items():
+        for db_ticket in db_tickets:
             ticket_summary = {
-                "ticket_id": ticket.ticket_id,
-                "customer_id": ticket.customer_id,
-                "customer_name": getattr(ticket, 'customer_name', 'Client'),
-                "order_number": ticket.order_number,
-                "product_name": ticket.product_name,
-                "problem_description": ticket.problem_description[:100] + "..." if len(ticket.problem_description) > 100 else ticket.problem_description,
-                "problem_category": ticket.problem_category,
-                "priority": ticket.priority,
-                "priority_score": ticket.priority_score,
-                "status": ticket.status,
-                "warranty_covered": ticket.warranty_check_result.is_covered if ticket.warranty_check_result else False,
-                "auto_resolved": ticket.auto_resolved,
-                "created_at": ticket.created_at.isoformat(),
-                "sla_response_deadline": ticket.sla_response_deadline.isoformat() if ticket.sla_response_deadline else None,
-                "evidence_count": len(ticket.evidences),
+                "ticket_id": db_ticket.ticket_id,
+                "customer_id": db_ticket.customer_id,
+                "customer_name": db_ticket.customer_name or 'Client',
+                "order_number": db_ticket.order_number,
+                "product_name": db_ticket.product_name,
+                "problem_description": db_ticket.problem_description[:100] + "..." if db_ticket.problem_description and len(db_ticket.problem_description) > 100 else db_ticket.problem_description,
+                "problem_category": db_ticket.problem_category,
+                "priority": db_ticket.priority,
+                "priority_score": db_ticket.priority_score,
+                "status": db_ticket.status,
+                "warranty_covered": db_ticket.warranty_status == "covered" if db_ticket.warranty_status else False,
+                "auto_resolved": db_ticket.auto_resolved,
+                "created_at": db_ticket.created_at.isoformat() if db_ticket.created_at else None,
+                "sla_response_deadline": db_ticket.sla_response_deadline.isoformat() if db_ticket.sla_response_deadline else None,
+                "evidence_count": len(db_ticket.evidence) if db_ticket.evidence else 0,
 
-                # 🎯 NOUVEAU: Données pour analyse de ton
-                "tone": ticket.tone_analysis.tone if ticket.tone_analysis else None,
-                "urgency": ticket.tone_analysis.urgency if ticket.tone_analysis else None,
-                "emotion_score": ticket.tone_analysis.emotion_score if ticket.tone_analysis else 0,
+                # NOUVEAU: Données pour analyse de ton
+                "tone": db_ticket.tone_category,
+                "urgency": "high" if db_ticket.priority in ["P0", "P1"] else "medium" if db_ticket.priority == "P2" else "low",
+                "emotion_score": db_ticket.tone_score or 0,
 
-                # 🎯 NOUVEAU: Validation client
-                "validation_status": getattr(ticket, 'validation_status', 'pending'),
-                "validation_required": ticket.client_summary.validation_required if ticket.client_summary else False
+                # NOUVEAU: Validation client
+                "validation_status": getattr(db_ticket, 'validation_status', 'pending'),
+                "validation_required": db_ticket.client_summary.get('validation_required', False) if db_ticket.client_summary else False
             }
 
             tickets_list.append(ticket_summary)
@@ -358,7 +368,7 @@ async def get_all_tickets():
             reverse=False
         )
 
-        logger.info(f"✅ {len(tickets_list)} tickets récupérés")
+        logger.info(f"{len(tickets_list)} tickets récupérés")
 
         return {
             "success": True,
@@ -367,134 +377,107 @@ async def get_all_tickets():
         }
 
     except Exception as e:
-        logger.error(f"❌ Erreur récupération tickets: {str(e)}")
+        logger.error(f"Erreur récupération tickets: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
 @router.get("/ticket/{ticket_id}/dossier")
-async def generate_client_dossier(ticket_id: str):
+async def generate_client_dossier(ticket_id: str, db: AsyncSession = Depends(get_db)):
     """
-    📄 NOUVEAU: Génère le dossier client complet au format structuré
+    NOUVEAU: Génère le dossier client complet au format structuré (depuis la base de données)
 
     Returns:
         Dossier client avec toutes les informations de la réclamation
     """
 
     try:
-        logger.info(f"📄 Génération du dossier client pour: {ticket_id}")
+        logger.info(f"Génération du dossier client pour: {ticket_id}")
 
-        if ticket_id not in sav_workflow_engine.active_tickets:
+        # Récupérer depuis la base de données
+        db_ticket = await ticket_repository.get_by_id(db, ticket_id)
+
+        if not db_ticket:
             raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} non trouvé")
 
-        ticket = sav_workflow_engine.active_tickets[ticket_id]
-
-        # Générer le dossier client complet
+        # Générer le dossier client complet depuis les données de la base
         dossier = {
-            # 🎫 INFORMATIONS TICKET
+            # INFORMATIONS TICKET
             "ticket": {
-                "ticket_id": ticket.ticket_id,
-                "created_at": ticket.created_at.isoformat(),
-                "status": ticket.status,
-                "priority": ticket.priority,
-                "priority_score": ticket.priority_score
+                "ticket_id": db_ticket.ticket_id,
+                "created_at": db_ticket.created_at.isoformat() if db_ticket.created_at else None,
+                "updated_at": db_ticket.updated_at.isoformat() if db_ticket.updated_at else None,
+                "status": db_ticket.status,
+                "priority": db_ticket.priority,
+                "priority_score": db_ticket.priority_score,
+                "priority_factors": db_ticket.priority_factors,
+                "source": db_ticket.source or "chat"
             },
 
-            # 👤 INFORMATIONS CLIENT
+            # INFORMATIONS CLIENT
             "client": {
-                "customer_id": ticket.customer_id,
-                "customer_name": getattr(ticket, 'customer_name', 'Client'),
-                "customer_tier": getattr(ticket, 'customer_tier', 'standard'),
-                "order_number": ticket.order_number
+                "customer_id": db_ticket.customer_id,
+                "customer_name": db_ticket.customer_name or 'Client',
+                "order_number": db_ticket.order_number
             },
 
-            # 🛋️ INFORMATIONS PRODUIT
+            # INFORMATIONS PRODUIT
             "produit": {
-                "product_sku": ticket.product_sku,
-                "product_name": ticket.product_name,
-                "product_value": getattr(ticket, 'product_value', 0),
-                "purchase_date": ticket.warranty_check_result.warranty_start_date.isoformat() if ticket.warranty_check_result else None,
-                "delivery_date": ticket.warranty_check_result.warranty_start_date.isoformat() if ticket.warranty_check_result else None
+                "product_sku": db_ticket.product_sku,
+                "product_name": db_ticket.product_name
             },
 
-            # ⚠️ PROBLÈME
+            # PROBLÈME
             "probleme": {
-                "description": ticket.problem_description,
-                "category": ticket.problem_category,
-                "subcategory": ticket.problem_subcategory,
-                "severity": ticket.problem_severity,
-                "confidence": ticket.problem_confidence
+                "description": db_ticket.problem_description,
+                "category": db_ticket.problem_category,
+                "severity": db_ticket.problem_severity,
+                "confidence": db_ticket.problem_confidence
             },
 
-            # 🎭 ANALYSE TON
+            # ANALYSE TON
             "analyse_ton": {
-                "tone": ticket.tone_analysis.tone if ticket.tone_analysis else "calm",
-                "urgency": ticket.tone_analysis.urgency if ticket.tone_analysis else "low",
-                "emotion_score": ticket.tone_analysis.emotion_score if ticket.tone_analysis else 0,
-                "urgency_score": ticket.tone_analysis.urgency_score if ticket.tone_analysis else 0,
-                "detected_keywords": ticket.tone_analysis.detected_keywords if ticket.tone_analysis else [],
-                "recommended_response_time": ticket.tone_analysis.recommended_response_time if ticket.tone_analysis else "48h",
-                "requires_human_empathy": ticket.tone_analysis.requires_human_empathy if ticket.tone_analysis else False,
-                "explanation": ticket.tone_analysis.explanation if ticket.tone_analysis else ""
+                "tone": db_ticket.tone_category,
+                "emotion_score": db_ticket.tone_score,
+                "detected_keywords": db_ticket.tone_keywords or []
             },
 
-            # 🛡️ GARANTIE
+            # GARANTIE
             "garantie": {
-                "covered": ticket.warranty_check_result.is_covered if ticket.warranty_check_result else False,
-                "component": ticket.warranty_check_result.component if ticket.warranty_check_result else None,
-                "warranty_type": ticket.warranty_check_result.warranty_type if ticket.warranty_check_result else None,
-                "expiry_date": ticket.warranty_check_result.warranty_expiry_date.isoformat() if ticket.warranty_check_result else None,
-                "reason": ticket.warranty_check_result.reason if ticket.warranty_check_result else None
+                "warranty_id": db_ticket.warranty_id,
+                "warranty_status": db_ticket.warranty_status
             },
 
-            # 📸 PREUVES
-            "preuves": [
-                {
-                    "evidence_id": evidence.evidence_id,
-                    "type": evidence.type,
-                    "url": evidence.file_url,
-                    "description": evidence.description,
-                    "uploaded_at": evidence.uploaded_at.isoformat()
-                }
-                for evidence in ticket.evidences
-            ],
+            # PREUVES
+            "preuves": db_ticket.evidence or [],
 
-            # ⏰ SLA
+            # PIÈCES JOINTES
+            "attachments": db_ticket.attachments or [],
+
+            # SLA
             "sla": {
-                "response_deadline": ticket.sla_response_deadline.isoformat() if ticket.sla_response_deadline else None,
-                "intervention_deadline": ticket.sla_intervention_deadline.isoformat() if ticket.sla_intervention_deadline else None
+                "response_deadline": db_ticket.sla_response_deadline.isoformat() if db_ticket.sla_response_deadline else None,
+                "intervention_deadline": db_ticket.sla_intervention_deadline.isoformat() if db_ticket.sla_intervention_deadline else None
             },
 
-            # ✅ RÉSOLUTION
+            # RÉSOLUTION
             "resolution": {
-                "auto_resolved": ticket.auto_resolved,
-                "resolution_type": ticket.resolution_type,
-                "resolution_description": ticket.resolution_description
+                "auto_resolved": db_ticket.auto_resolved,
+                "resolution_type": db_ticket.resolution_type,
+                "resolution_description": db_ticket.resolution_description,
+                "resolved_at": db_ticket.resolved_at.isoformat() if db_ticket.resolved_at else None
             },
 
-            # 📧 RÉCAPITULATIF CLIENT
-            "recapitulatif": {
-                "summary_id": ticket.client_summary.summary_id if ticket.client_summary else None,
-                "validation_required": ticket.client_summary.validation_required if ticket.client_summary else False,
-                "validation_link": ticket.client_summary.validation_link if ticket.client_summary else None,
-                "validation_status": getattr(ticket, 'validation_status', 'pending'),
-                "email_body": ticket.client_summary.email_body if ticket.client_summary else None,
-                "sms_body": ticket.client_summary.sms_body if ticket.client_summary else None
-            },
+            # RÉCAPITULATIF CLIENT
+            "recapitulatif": db_ticket.client_summary or {},
 
-            # 📜 HISTORIQUE
-            "historique": [
-                {
-                    "action_id": action.action_id,
-                    "timestamp": action.timestamp.isoformat(),
-                    "actor": action.actor,
-                    "action_type": action.action_type,
-                    "description": action.description
-                }
-                for action in ticket.actions
-            ]
+            # HISTORIQUE
+            "historique": db_ticket.actions or [],
+
+            # NOTES
+            "notes": db_ticket.notes or []
         }
 
-        logger.info(f"✅ Dossier généré: {ticket_id}")
+        logger.info(f"Dossier généré depuis la base de données: {ticket_id}")
 
         return {
             "success": True,
@@ -504,7 +487,7 @@ async def generate_client_dossier(ticket_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"❌ Erreur génération dossier: {str(e)}")
+        logger.error(f"Erreur génération dossier: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 
@@ -516,31 +499,31 @@ def _generate_next_steps(ticket: SAVTicket) -> List[str]:
     next_steps = []
 
     if ticket.auto_resolved:
-        next_steps.append("✅ Votre demande a été traitée automatiquement")
-        next_steps.append(f"📋 Solution: {ticket.resolution_description}")
+        next_steps.append("Votre demande a été traitée automatiquement")
+        next_steps.append(f"Solution: {ticket.resolution_description}")
 
         if ticket.resolution_type == "auto_replacement":
-            next_steps.append("📦 Une pièce de remplacement sera expédiée sous 48h")
-            next_steps.append("📧 Vous recevrez un email de confirmation avec le numéro de suivi")
+            next_steps.append("Une pièce de remplacement sera expédiée sous 48h")
+            next_steps.append("Vous recevrez un email de confirmation avec le numéro de suivi")
         elif ticket.resolution_type == "technician_dispatch":
-            next_steps.append("👷 Un technicien vous contactera pour planifier l'intervention")
+            next_steps.append("Un technicien vous contactera pour planifier l'intervention")
             next_steps.append(f"⏰ Délai maximal: {ticket.sla_intervention_deadline.strftime('%d/%m/%Y')}")
 
     elif ticket.status == "escalated_to_human":
-        next_steps.append("⚠️ Votre demande nécessite une analyse approfondie")
-        next_steps.append("👤 Un conseiller SAV vous contactera rapidement")
-        next_steps.append(f"📞 Contact prévu avant: {ticket.sla_response_deadline.strftime('%d/%m/%Y à %H:%M')}")
+        next_steps.append("️ Votre demande nécessite une analyse approfondie")
+        next_steps.append("Un conseiller SAV vous contactera rapidement")
+        next_steps.append(f"Contact prévu avant: {ticket.sla_response_deadline.strftime('%d/%m/%Y à %H:%M')}")
 
     elif ticket.status == "evidence_collection":
-        next_steps.append("📸 Veuillez fournir les preuves requises")
+        next_steps.append("Veuillez fournir les preuves requises")
         next_steps.append("⬆️ Uploadez vos photos/vidéos via le bouton ci-dessous")
-        next_steps.append("✅ Une fois les preuves reçues, votre demande sera traitée")
+        next_steps.append("Une fois les preuves reçues, votre demande sera traitée")
 
     elif ticket.status == "awaiting_technician":
-        next_steps.append("👷 Un technicien sera assigné à votre demande")
+        next_steps.append("Un technicien sera assigné à votre demande")
         next_steps.append(f"⏰ Intervention prévue avant: {ticket.sla_intervention_deadline.strftime('%d/%m/%Y')}")
 
     # Toujours inclure le numéro de ticket
-    next_steps.append(f"🎫 Conservez votre numéro de ticket: {ticket.ticket_id}")
+    next_steps.append(f"Conservez votre numéro de ticket: {ticket.ticket_id}")
 
     return next_steps

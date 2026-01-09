@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 import json
 from app.services.product_catalog import product_catalog
 from app.services.sav_knowledge import sav_kb
-from app.services.sav_workflow_engine import sav_workflow_engine
 from app.services.evidence_collector import evidence_collector
 from app.services.warranty_service import warranty_service
 from app.models.warranty import WarrantyType
+from app.core.circuit_breaker import CircuitBreakerManager, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -80,92 +80,56 @@ class MeubledeFranceChatbot:
 - Proactif: Anticipe les besoins, pose bonnes questions
 - Clair: Évite jargon technique, explique simplement
 
-📋 MÉTHODOLOGIE SAV (CRUCIAL - SUIS CES ÉTAPES):
+📷 GESTION DES PHOTOS:
+- ✅ TU PEUX recevoir des photos uploadées par le client
+- Quand une photo est uploadée, tu verras: "[CLIENT A UPLOADÉ X PHOTO(S): URL]"
+- ⚠️ NE PAS ANALYSER LES PHOTOS - C'est le rôle du SAV
+- Accuser réception: "Merci pour les photos. Reçues ✓"
 
-**1. IDENTIFICATION PRODUIT** ⚠️ PRIORITÉ ABSOLUE
-   - Demander numéro de commande (format CMD-XXXX-XXXXX)
-   - Identifier produit exact du catalogue
-   - Si incertain, demander précisions (couleur, matière, taille, référence)
-   - Vérifier dans base catalogue avant toute recommandation
+📋 MÉTHODOLOGIE SAV SIMPLIFIÉE (3 ÉTAPES SEULEMENT):
 
-**2. DIAGNOSTIC PROBLÈME**
-   - Écouter attentivement la description complète
-   - Poser questions ciblées selon type de produit:
-     * Canapés: Quelle partie? Coussins/structure/mécanisme?
-     * Tables: Plateau/pieds/mécanisme extension?
-     * Lits: Sommier/vérin/têtes de lit?
-     * Matelas: Affaissement où? Depuis quand?
-   - Vérifier si problème figure dans "common_issues" du produit
-   - Demander photos/vidéos si défaut visuel ou mécanique
+**ÉTAPE 1️⃣ - PREMIÈRE RÉPONSE** (Message COURT et empathique)
+Dès que le client mentionne un problème:
 
-**3. VÉRIFICATION GARANTIE**
-   - Calculer ancienneté (date achat vs aujourd'hui)
-   - Vérifier couverture selon type:
-     * Structure: 2-5 ans selon produit
-     * Tissus/Cuir: 1-2 ans usure normale
-     * Mécanismes: 2-5 ans selon type
-     * Électronique: 2 ans
-     * Matelas: 10 ans si affaissement >2.5cm
-   - Préciser exclusions (usage anormal, taches, accidents, modifications)
+"Je suis désolé d'entendre cela. Pourriez-vous s'il vous plaît envoyer des photos du [problème mentionné] ?
+Cela permettra à notre service après-vente de traiter votre demande rapidement."
 
-**4. CLASSIFICATION PRIORITÉ** (ESSENTIEL!)
-   🔴 **P0 CRITIQUE**: Danger sécurité immédiat, risque blessure → Réponse <4h, Intervention <24h
-      Exemples: Vérin cassé (retombée lit), pied cassé (chute), verre brisé
+⚠️ RÈGLES ÉTAPE 1:
+- Message COURT (2 lignes max)
+- NE PAS poser 10 questions
+- NE PAS demander le modèle exact, couleur, etc.
+- Juste: empathie + demande de photos
 
-   🟠 **P1 HAUTE**: Fonction principale inutilisable, produit ne remplit plus son rôle → <24h
-      Exemples: Mécanisme relax HS, table bloquée, matelas affaissé >5cm
+**ÉTAPE 2️⃣ - APRÈS RÉCEPTION DES PHOTOS** (Récapitulatif structuré)
+Dès que tu vois "[CLIENT A UPLOADÉ X PHOTO(S)...]":
 
-   🟡 **P2 MOYENNE**: Défaut gênant mais produit utilisable → <5 jours
-      Exemples: Affaissement léger coussins, rayure visible, couture défaite
+"Merci pour les photos. Voici le récapitulatif de votre demande :
 
-   🟢 **P3 BASSE**: Information, entretien, question simple → <7 jours
-      Exemples: Conseils entretien, retour 14j, questions garantie
+📋 RÉCAPITULATIF
+- Produit : [modèle/référence SI MENTIONNÉ par le client, sinon "Canapé d'angle"]
+- Problème : [description EXACTE donnée par le client]
+- Photos : Reçues ✓
 
-**5. PROPOSITION SOLUTION**
-   Selon situation:
-   - **Sous garantie + défaut fabrication**: Remplacement/réparation GRATUIT
-   - **Hors garantie**: Devis intervention (sauf conseils gratuits)
-   - **Usure normale**: Conseils entretien, proposition pièces
-   - **Livraison endommagée**: Refus ou acceptation avec réserves
+Pouvez-vous confirmer que ces informations sont correctes ?"
 
-   Solutions possibles:
-   - Remplacement pièce défectueuse
-   - Intervention technicien domicile
-   - Échange produit complet
-   - Remboursement/avoir
-   - Conseils entretien préventif
+⚠️ RÈGLES ÉTAPE 2:
+- Utiliser UNIQUEMENT les infos données par le client
+- NE PAS inventer de détails
+- NE PAS analyser les photos
+- Format récapitulatif OBLIGATOIRE
 
-**6. DEMANDE DE VALIDATION CLIENT** ⚠️ OBLIGATOIRE AVANT CRÉATION TICKET
-   Après avoir analysé le problème (étapes 1-5), tu DOIS demander confirmation au client:
+**ÉTAPE 3️⃣ - APRÈS VALIDATION CLIENT** (Création ticket)
+Si le client dit "OUI", "Oui", "C'est correct", "Confirmé":
 
-   📋 RÉCAPITULATIF DE VOTRE DEMANDE SAV
+"Parfait ! Votre ticket SAV a été créé avec succès.
+Notre équipe reviendra vers vous dans les plus brefs délais.
 
-   👤 Client: [Nom du client]
-   🔢 Commande: [CMD-XXXX-XXXXX]
-   🛋️  Produit: [Nom du produit]
-   ⚠️  Problème: [Description du problème détecté]
-   [🔴/🟠/🟡/🟢] Priorité: [P0/P1/P2/P3] - [CRITIQUE/HAUTE/MOYENNE/BASSE]
-   🛡️ Garantie: [✅ Couverte / ❌ Non couverte]
+Numéro de ticket : [AUTO-GÉNÉRÉ]"
 
-   🔧 SOLUTION PROPOSÉE:
-   [Décris la solution: intervention technicien, remplacement pièce, conseils, etc.]
-
-   ⚠️ CONFIRMEZ-VOUS CES INFORMATIONS ?
-
-   → Tapez "OUI" pour créer le ticket SAV
-   → Tapez "NON" si des informations sont incorrectes
-
-   ⚠️ IMPORTANT: Ne crée JAMAIS le ticket AVANT que le client ait confirmé avec "OUI"
-   Cela évite les erreurs et les demandes non sérieuses.
-
-**7. CRÉATION DOSSIER SAV** (APRÈS validation client)
-   Une fois que le client a tapé "OUI":
-   - ✅ Ticket créé: SAV-YYYYMMDD-XXX
-   - Résumer: Produit + Problème + Priorité
-   - Lister: Actions prises + Prochaines étapes
-   - Timeline: Délai intervention selon priorité
-   - Confirmer: Email récapitulatif envoyé
-   - Indiquer: "Vous pouvez suivre votre ticket dans le Tableau de Bord"
+⚠️ RÈGLES ÉTAPE 3:
+- Créer le ticket UNIQUEMENT après validation
+- Message de confirmation simple
+- Pas de détails techniques inutiles
 
    **⚠️ PUIS OBLIGATOIREMENT** demander au client s'il veut continuer ou clôturer:
 
@@ -398,7 +362,8 @@ PRODUCTS AVAILABLE:
 
     async def chat(self, user_message: str,
                    order_number: Optional[str] = None,
-                   photos: Optional[List[str]] = None) -> Dict:
+                   photos: Optional[List[str]] = None,
+                   db_session=None) -> Dict:
         """
         Gère la conversation avec le client
 
@@ -406,11 +371,15 @@ PRODUCTS AVAILABLE:
             user_message: Message du client
             order_number: Numéro de commande (si fourni)
             photos: Liste URLs photos uploadées
+            db_session: Database session for ticket persistence (optional)
 
         Returns:
             Dict avec réponse et metadata
         """
         try:
+            # Do not store request-scoped DB sessions on the chatbot instance (avoid stale/long-lived sessions).
+            # Pass `db_session` explicitly to methods that need it.
+
             # Détection langue
             language = self.detect_language(user_message)
 
@@ -432,10 +401,17 @@ PRODUCTS AVAILABLE:
             if conv_type != "general":
                 self.conversation_type = conv_type
 
+            # Préparer le message utilisateur avec photos si présentes
+            user_content = user_message
+            if photos and len(photos) > 0:
+                photo_info = f"\n\n[CLIENT A UPLOADÉ {len(photos)} PHOTO(S): {', '.join(photos)}]"
+                user_content += photo_info
+                logger.info(f"📷 {len(photos)} photo(s) included in message")
+
             # Ajout message à l'historique
             self.conversation_history.append({
                 "role": "user",
-                "content": user_message
+                "content": user_content
             })
 
             # Si numéro commande fourni, récupérer données
@@ -492,15 +468,44 @@ Utilise ces infos pour réponse rapide et pertinente.
             ]
             messages.extend(self.conversation_history)
 
-            # Appel OpenAI API
-            response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=messages,
-                max_tokens=1000,
-                temperature=0.7
+            # Appel OpenAI API with circuit breaker protection
+            import asyncio
+            loop = asyncio.get_running_loop()
+
+            # Get circuit breaker for OpenAI (5 failures, 60s recovery, 30s timeout)
+            openai_breaker = CircuitBreakerManager.get_breaker(
+                name="openai",
+                failure_threshold=5,
+                recovery_timeout=60,
+                timeout=30
             )
 
-            assistant_message = response.choices[0].message.content
+            try:
+                # Wrap OpenAI call in circuit breaker
+                async def call_openai():
+                    return await loop.run_in_executor(None, lambda: self.client.chat.completions.create(
+                        model="gpt-4o-mini",  # Changed from gpt-4 to save costs (200x cheaper!)
+                        messages=messages,
+                        max_tokens=1000,
+                        temperature=0.7
+                    ))
+
+                resp = await openai_breaker.call(call_openai)
+                assistant_message = resp.choices[0].message.content if getattr(resp, 'choices', None) else str(resp)
+
+            except CircuitBreakerError as e:
+                logger.error(f"OpenAI circuit breaker is open: {e}")
+                # Fallback response when OpenAI is unavailable
+                error_messages = {
+                    "fr": "Je suis temporairement indisponible. Notre service technique est informé et travaille à résoudre le problème. Veuillez réessayer dans quelques instants.",
+                    "en": "I am temporarily unavailable. Our technical team has been notified and is working to resolve the issue. Please try again in a few moments.",
+                    "ar": "أنا غير متاح مؤقتًا. تم إبلاغ فريقنا الفني ويعمل على حل المشكلة. يرجى المحاولة مرة أخرى بعد لحظات."
+                }
+                assistant_message = error_messages.get(language, error_messages["fr"])
+
+            except Exception as e:
+                logger.error(f"OpenAI call failed: {e}")
+                raise
 
             # Ajout réponse à l'historique
             self.conversation_history.append({
@@ -547,7 +552,8 @@ Utilise ces infos pour réponse rapide et pertinente.
                 validation_data = await self.prepare_ticket_validation(
                     user_message=user_message,
                     order_number=order_number,
-                    customer_id=None
+                    customer_id=None,
+                    db_session=db_session
                 )
                 # Pas de ticket créé, juste données pour validation
                 sav_ticket_data = {"validation_pending": True, "validation_data": validation_data}
@@ -614,7 +620,8 @@ Utilise ces infos pour réponse rapide et pertinente.
         self,
         user_message: str,
         order_number: Optional[str] = None,
-        customer_id: Optional[str] = None
+        customer_id: Optional[str] = None,
+        db_session: Optional[object] = None
     ) -> Optional[Dict]:
         """
         Initialise le workflow SAV automatique si les conditions sont remplies
@@ -680,8 +687,10 @@ Utilise ces infos pour réponse rapide et pertinente.
                 warranty_type=WarrantyType.STANDARD
             )
 
-            # Lancer le workflow SAV automatique
-            ticket = await sav_workflow_engine.process_new_claim(
+            # Lancer le workflow SAV automatique avec persistence DB
+            from app.services.sav_workflow_engine import SAVWorkflowEngine
+            workflow_engine = SAVWorkflowEngine(db_session=db_session)
+            ticket = await workflow_engine.process_new_claim(
                 customer_id=customer_id,
                 order_number=order_number,
                 product_sku=product_sku,
@@ -718,7 +727,10 @@ Utilise ces infos pour réponse rapide et pertinente.
                 "evidence_requirements": evidence_message,
                 "created_at": ticket.created_at.isoformat(),
                 "language": self.detect_language(user_message),
-                "problem_description": user_message
+                "problem_description": user_message,
+                # 🎯 NOUVEAU: Informations de validation
+                "requires_validation": ticket.client_summary.validation_required if ticket.client_summary else False,
+                "validation_status": ticket.validation_status
             }
 
             logger.info(
@@ -813,7 +825,8 @@ Utilise ces infos pour réponse rapide et pertinente.
         self,
         user_message: str,
         order_number: str,
-        customer_id: Optional[str] = None
+        customer_id: Optional[str] = None,
+        db_session: Optional[object] = None
     ) -> Dict:
         """
         Prépare le ticket SAV pour validation client SANS le créer
@@ -911,7 +924,7 @@ Utilise ces infos pour réponse rapide et pertinente.
             logger.error(f"❌ Erreur préparation validation: {str(e)}")
             raise
 
-    async def create_ticket_after_validation(self) -> Dict:
+    async def create_ticket_after_validation(self, db_session: Optional[object] = None) -> Dict:
         """
         Crée le ticket SAV après validation du client
         Utilise les données stockées dans pending_ticket_validation
@@ -927,8 +940,10 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             logger.info(f"✅ Création ticket après validation: {data['order_number']}")
 
-            # Créer le ticket SAV complet
-            ticket = await sav_workflow_engine.process_new_claim(
+            # Créer le ticket SAV complet avec persistence DB
+            from app.services.sav_workflow_engine import SAVWorkflowEngine
+            workflow_engine = SAVWorkflowEngine(db_session=db_session)
+            ticket = await workflow_engine.process_new_claim(
                 customer_id=data["customer_id"],
                 order_number=data["order_number"],
                 product_sku=data["product_sku"],

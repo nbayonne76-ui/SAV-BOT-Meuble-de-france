@@ -56,8 +56,8 @@ class RateLimits:
     CHAT_SESSION = "60/minute"
 
     # Upload endpoints (strict due to resource usage)
-    UPLOAD_FILE = "10/minute"
-    UPLOAD_BULK = "3/minute"
+    UPLOAD_FILE = "10/minute"  # Single/multiple file uploads
+    UPLOAD_BULK = "3/minute"   # Bulk upload operations (legacy)
 
     # API endpoints (standard)
     API_READ = "100/minute"

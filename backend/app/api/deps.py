@@ -6,9 +6,10 @@ from datetime import datetime
 from typing import Optional, List
 from fastapi import Depends, HTTPException, status, Security
 from fastapi.security import OAuth2PasswordBearer, APIKeyHeader
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.core.security import verify_token, TokenData, verify_api_key
+from app.core.security import verify_token_with_blacklist, TokenData, verify_api_key
 from app.db.session import get_db
 from app.models.user import UserDB, UserRole, UserStatus, APIKeyDB
 
@@ -26,33 +27,38 @@ api_key_header = APIKeyHeader(
 
 
 async def get_current_user(
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     token: Optional[str] = Depends(oauth2_scheme),
     api_key: Optional[str] = Depends(api_key_header)
 ) -> Optional[UserDB]:
     """
     Get current authenticated user from JWT token or API key.
     Returns None if no authentication provided.
+    Checks token blacklist for revoked tokens.
     """
     # Try JWT token first
     if token:
-        token_data = verify_token(token, token_type="access")
+        # Verify token and check blacklist
+        token_data = await verify_token_with_blacklist(token, token_type="access")
         if token_data:
-            user = db.query(UserDB).filter(UserDB.id == token_data.user_id).first()
+            result = await db.execute(select(UserDB).where(UserDB.id == token_data.user_id))
+            user = result.scalar_one_or_none()
             if user and user.status == UserStatus.ACTIVE:
                 return user
 
     # Try API key
     if api_key:
-        # Find API key in database
-        api_key_record = db.query(APIKeyDB).filter(APIKeyDB.is_active == 1).all()
-        for record in api_key_record:
+        # Find active API keys in database
+        result = await db.execute(select(APIKeyDB).where(APIKeyDB.is_active == 1))
+        api_key_records = result.scalars().all()
+        for record in api_key_records:
             if verify_api_key(api_key, record.key_hash):
                 # Update last used
                 record.last_used = datetime.utcnow()
-                db.commit()
+                await db.commit()
                 # Get associated user
-                user = db.query(UserDB).filter(UserDB.id == record.user_id).first()
+                user_result = await db.execute(select(UserDB).where(UserDB.id == record.user_id))
+                user = user_result.scalar_one_or_none()
                 if user and user.status == UserStatus.ACTIVE:
                     return user
 

@@ -8,8 +8,11 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
 import secrets
+import logging
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Password hashing configuration
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -79,7 +82,8 @@ def create_access_token(
         "exp": expire,
         "type": "access",
         "scopes": scopes or [],
-        "iat": datetime.utcnow()
+        "iat": datetime.utcnow(),
+        "jti": secrets.token_urlsafe(32)  # Unique token ID for revocation
     }
 
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
@@ -180,3 +184,108 @@ def verify_api_key(api_key: str, stored_key_hash: str) -> bool:
 def hash_api_key(api_key: str) -> str:
     """Hash an API key for storage"""
     return pwd_context.hash(api_key)
+
+
+# ============== JWT Token Blacklist ==============
+
+async def blacklist_token(token: str) -> bool:
+    """
+    Add a token to the blacklist.
+    Token will be blacklisted until its natural expiration.
+
+    Args:
+        token: The JWT token string to blacklist
+
+    Returns:
+        True if successfully blacklisted, False otherwise
+    """
+    try:
+        from app.core.redis import get_cache
+
+        # Decode token to get expiration and jti
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        jti = payload.get("jti")
+        exp = payload.get("exp")
+
+        if not jti:
+            logger.warning("Cannot blacklist token without jti")
+            return False
+
+        # Calculate TTL (time until token expires)
+        exp_datetime = datetime.fromtimestamp(exp)
+        ttl_seconds = int((exp_datetime - datetime.utcnow()).total_seconds())
+
+        if ttl_seconds <= 0:
+            # Token already expired, no need to blacklist
+            return True
+
+        # Store in cache with expiration
+        cache = get_cache()
+        key = f"blacklist:token:{jti}"
+        await cache.set(key, "revoked", expire=ttl_seconds)
+
+        logger.info(f"Token blacklisted: {jti[:16]}... (TTL: {ttl_seconds}s)")
+        return True
+
+    except JWTError as e:
+        logger.error(f"Failed to decode token for blacklisting: {e}")
+        return False
+    except Exception as e:
+        logger.error(f"Error blacklisting token: {e}")
+        return False
+
+
+async def is_token_blacklisted(token: str) -> bool:
+    """
+    Check if a token is blacklisted.
+
+    Args:
+        token: The JWT token string to check
+
+    Returns:
+        True if token is blacklisted, False otherwise
+    """
+    try:
+        from app.core.redis import get_cache
+
+        # Decode token to get jti
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        jti = payload.get("jti")
+
+        if not jti:
+            # Old tokens without jti cannot be blacklisted
+            # Consider them valid (or update all tokens to have jti)
+            return False
+
+        # Check cache
+        cache = get_cache()
+        key = f"blacklist:token:{jti}"
+        return await cache.exists(key)
+
+    except JWTError:
+        # If token is invalid, treat as blacklisted
+        return True
+    except Exception as e:
+        logger.error(f"Error checking token blacklist: {e}")
+        # Fail secure: treat as blacklisted on error
+        return True
+
+
+async def verify_token_with_blacklist(token: str, token_type: str = "access") -> Optional[TokenData]:
+    """
+    Verify a JWT token and check if it's blacklisted.
+
+    Args:
+        token: The JWT token string
+        token_type: Expected token type ("access" or "refresh")
+
+    Returns:
+        TokenData if valid and not blacklisted, None otherwise
+    """
+    # First check if token is blacklisted
+    if await is_token_blacklisted(token):
+        logger.warning("Attempted use of blacklisted token")
+        return None
+
+    # Then do standard token verification
+    return verify_token(token, token_type)

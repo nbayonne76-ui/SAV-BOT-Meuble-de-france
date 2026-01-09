@@ -1,81 +1,77 @@
 // frontend/src/components/ChatInterface.jsx
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Camera, X, Loader2, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Send,
+  Camera,
+  X,
+  Loader2,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
+import { useLanguage } from "../context/LanguageContext";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
+  const [inputMessage, setInputMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [sessionId] = useState(`session-${Date.now()}`);
   const [isRecording, setIsRecording] = useState(false);
   const [isVoiceSupported, setIsVoiceSupported] = useState(false);
-  const [transcript, setTranscript] = useState('');
-  const [isSpeechEnabled, setIsSpeechEnabled] = useState(true); // Activer voix par défaut
+  const [transcript, setTranscript] = useState("");
+  const [isSpeechEnabled, setIsSpeechEnabled] = useState(false); // Activer voix par défaut
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Language management (global)
+  const { language, setLanguage, t, languages } = useLanguage();
+  const selectedLanguage = language;
+  const languageLocales = Object.fromEntries(
+    Object.entries(languages).map(([k, v]) => [k, v.locale])
+  );
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
   const isRecognitionActive = useRef(false);
   const speechSynthesisRef = useRef(null);
 
-  // Message d'accueil
+  // Message d'accueil (i18n)
   useEffect(() => {
-    const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Meuble de France 🛠️
+    const welcomeMessage = t("chat.welcome.long");
 
-Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votre réclamation.
-
-🎯 **Je vais vous aider à :**
-• Analyser votre problème automatiquement
-• Vérifier votre garantie instantanément
-• Collecter les preuves nécessaires (photos/vidéos)
-• Créer votre ticket SAV en quelques secondes
-• Calculer la priorité et le délai de traitement
-
-📋 **Pour commencer, veuillez me fournir :**
-1. **Votre nom complet**
-2. **Votre numéro de commande**
-3. **La description détaillée de votre problème**
-4. **Des photos du problème** (si possible)
-
-**Exemple :**
-"Bonjour, je m'appelle Jean Dupont. Mon canapé OSLO a un pied cassé, c'est dangereux pour mon enfant! Numéro de commande: CMD-2024-12345"
-
-🎤 **Nouveauté : Communication vocale bidirectionnelle !**
-• Parlez avec le bouton microphone 🎤
-• J'écouterai votre problème
-• Je vous répondrai avec ma voix 🔊
-
-**Je m'occupe du reste automatiquement ! Présentez-vous et expliquez votre problème :**`;
-
-    setMessages([{
-      role: 'assistant',
-      content: welcomeMessage,
-      timestamp: new Date()
-    }]);
+    setMessages([
+      {
+        role: "assistant",
+        content: welcomeMessage,
+        timestamp: new Date(),
+      },
+    ]);
 
     // 🔊 Parler le message d'accueil après 1 seconde
     setTimeout(() => {
       if (isSpeechEnabled) {
-        const shortWelcome = "Bonjour ! Bienvenue au Service Après-Vente de Meuble de France. Je suis votre assistant SAV intelligent. Pour commencer, veuillez me fournir votre nom complet, votre numéro de commande, et la description détaillée de votre problème. Vous pouvez aussi utiliser le bouton microphone pour me parler directement.";
+        const shortWelcome = t("chat.welcome.short");
         speakText(shortWelcome);
       }
     }, 1000);
-  }, []);
+  }, [selectedLanguage, isSpeechEnabled]);
 
   // Auto-scroll vers le bas
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // 🎤 Initialiser Web Speech API - VERSION AMÉLIORÉE
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      console.warn('⚠️ Web Speech API non supportée');
+      console.warn("⚠️ Web Speech API non supportée");
       setIsVoiceSupported(false);
       return;
     }
@@ -84,20 +80,20 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
     const recognition = new SpeechRecognition();
 
     // Configuration optimisée
-    recognition.lang = 'fr-FR';
+    recognition.lang = languageLocales[selectedLanguage] || "fr-FR";
     recognition.continuous = true; // Continuer à écouter
     recognition.interimResults = true; // Afficher résultats en temps réel
     recognition.maxAlternatives = 1;
 
     // 🎯 Gérer les résultats (interim + final)
     recognition.onresult = (event) => {
-      let interimTranscript = '';
-      let finalTranscript = '';
+      let interimTranscript = "";
+      let finalTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptPiece = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcriptPiece + ' ';
+          finalTranscript += transcriptPiece + " ";
         } else {
           interimTranscript += transcriptPiece;
         }
@@ -110,59 +106,61 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
       // Ajouter résultat final au champ de saisie
       if (finalTranscript) {
-        setInputMessage(prev => {
+        setInputMessage((prev) => {
           const current = prev.trim();
           const newText = finalTranscript.trim();
           return current ? `${current} ${newText}` : newText;
         });
-        setTranscript('');
+        setTranscript("");
       }
     };
 
     // 🎯 Gérer les erreurs
     recognition.onerror = (event) => {
-      console.error('❌ Erreur reconnaissance:', event.error);
+      console.error("❌ Erreur reconnaissance:", event.error);
 
       // Ne pas afficher d'alerte pour "no-speech" ou "aborted"
-      if (event.error === 'no-speech' || event.error === 'aborted') {
-        console.log('🔇 Pas de parole détectée ou arrêt manuel');
-      } else if (event.error === 'not-allowed') {
-        alert('🚫 Accès au microphone refusé.\n\nVeuillez autoriser l\'accès dans les paramètres de votre navigateur.');
-      } else if (event.error === 'network') {
-        alert('🌐 Erreur réseau. Vérifiez votre connexion internet.');
+      if (event.error === "no-speech" || event.error === "aborted") {
+        console.log("🔇 Pas de parole détectée ou arrêt manuel");
+      } else if (event.error === "not-allowed") {
+        alert(
+          "🚫 Accès au microphone refusé.\n\nVeuillez autoriser l'accès dans les paramètres de votre navigateur."
+        );
+      } else if (event.error === "network") {
+        alert("🌐 Erreur réseau. Vérifiez votre connexion internet.");
       } else {
-        console.error('Erreur inconnue:', event.error);
+        console.error("Erreur inconnue:", event.error);
       }
 
       isRecognitionActive.current = false;
       setIsRecording(false);
-      setTranscript('');
+      setTranscript("");
     };
 
     // 🎯 Redémarrer automatiquement si arrêt inattendu
     recognition.onend = () => {
-      console.log('🎤 Reconnaissance terminée');
+      console.log("🎤 Reconnaissance terminée");
 
       // Si on devrait toujours enregistrer, redémarrer
       if (isRecognitionActive.current && isRecording) {
         try {
           recognition.start();
-          console.log('🔄 Redémarrage automatique...');
+          console.log("🔄 Redémarrage automatique...");
         } catch (error) {
-          console.error('❌ Impossible de redémarrer:', error);
+          console.error("❌ Impossible de redémarrer:", error);
           isRecognitionActive.current = false;
           setIsRecording(false);
         }
       } else {
         isRecognitionActive.current = false;
         setIsRecording(false);
-        setTranscript('');
+        setTranscript("");
       }
     };
 
     // 🎯 Événement de démarrage
     recognition.onstart = () => {
-      console.log('✅ Reconnaissance démarrée');
+      console.log("✅ Reconnaissance démarrée");
       isRecognitionActive.current = true;
       setIsRecording(true);
     };
@@ -175,19 +173,27 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
         try {
           recognitionRef.current.stop();
         } catch (error) {
-          console.log('Cleanup error:', error);
+          console.log("Cleanup error:", error);
         }
       }
     };
   }, []);
 
+  // Update recognition language when selection changes
+  useEffect(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.lang =
+        languageLocales[selectedLanguage] || "fr-FR";
+    }
+  }, [selectedLanguage]);
+
   // 🔊 Initialiser Text-to-Speech (Synthèse vocale)
   useEffect(() => {
-    if ('speechSynthesis' in window) {
+    if ("speechSynthesis" in window) {
       speechSynthesisRef.current = window.speechSynthesis;
-      console.log('✅ Synthèse vocale disponible');
+      console.log("✅ Synthèse vocale disponible");
     } else {
-      console.warn('⚠️ Synthèse vocale non supportée');
+      console.warn("⚠️ Synthèse vocale non supportée");
     }
 
     // Cleanup: arrêter la voix au démontage
@@ -207,41 +213,49 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
     // Nettoyer le texte (enlever markdown, emojis complexes, etc.)
     const cleanText = text
-      .replace(/[#*_`]/g, '') // Enlever markdown
-      .replace(/\*\*/g, '') // Enlever gras
-      .replace(/\n\n/g, '. ') // Remplacer doubles sauts par point
-      .replace(/\n/g, ' ') // Remplacer sauts simples par espace
-      .replace(/[🎯📋⚡🔒🛡️🎤]/g, '') // Enlever certains emojis
+      .replace(/[#*_`]/g, "") // Enlever markdown
+      .replace(/\*\*/g, "") // Enlever gras
+      .replace(/\n\n/g, ". ") // Remplacer doubles sauts par point
+      .replace(/\n/g, " ") // Remplacer sauts simples par espace
+      .replace(/[🎯📋⚡🔒🛡️🎤]/g, "") // Enlever certains emojis
       .trim();
 
     const utterance = new SpeechSynthesisUtterance(cleanText);
 
-    // Configuration voix française
-    utterance.lang = 'fr-FR';
+    // Configuration voix selon la langue sélectionnée
+    const langLocale = languageLocales[selectedLanguage] || "fr-FR";
+    utterance.lang = langLocale;
     utterance.rate = 1.1; // Vitesse (0.5 à 2)
     utterance.pitch = 1.0; // Tonalité (0 à 2)
     utterance.volume = 1.0; // Volume (0 à 1)
 
-    // Chercher une voix française
+    // Chercher une voix correspondant à la langue courte (fr/en/ar...)
     const voices = speechSynthesisRef.current.getVoices();
-    const frenchVoice = voices.find(voice => voice.lang.startsWith('fr'));
-    if (frenchVoice) {
-      utterance.voice = frenchVoice;
+    const languageShort =
+      languages[selectedLanguage]?.short || selectedLanguage;
+    const matchedVoice = voices.find(
+      (voice) => voice.lang && voice.lang.startsWith(languageShort)
+    );
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
     }
 
     // Événements
     utterance.onstart = () => {
       setIsSpeaking(true);
-      console.log('🔊 Le bot parle...');
+      console.log("🔊 Le bot parle...");
     };
 
     utterance.onend = () => {
       setIsSpeaking(false);
-      console.log('🔇 Le bot a fini de parler');
+      console.log("🔇 Le bot a fini de parler");
     };
 
     utterance.onerror = (error) => {
-      console.error('❌ Erreur synthèse vocale:', error);
+      // L'erreur "interrupted" est normale quand on annule pour démarrer une nouvelle synthèse
+      if (error.error !== "interrupted") {
+        console.error("❌ Erreur synthèse vocale:", error);
+      }
       setIsSpeaking(false);
     };
 
@@ -265,36 +279,137 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
     setIsSpeechEnabled(!isSpeechEnabled);
   };
 
+  // 🔧 Helper to build absolute URLs for files (handles absolute, protocol-missing, and relative paths)
+  const getAbsoluteUrl = (rawUrl) => {
+    if (!rawUrl) return "";
+    const url = String(rawUrl).trim();
+
+    // Protocol-relative (e.g., //res.cloudinary.com/...) -> prefix https:
+    if (url.startsWith("//")) {
+      console.warn("Normalizing protocol-relative URL:", url);
+      return `https:${url}`;
+    }
+
+    // Already well-formed (http:// or https://)
+    if (/^https?:\/\//i.test(url)) return url;
+
+    // Malformed but starts with 'https//' or 'http//' (missing colon) -> fix
+    if (/^https?\/\//i.test(url)) {
+      const fixed = url.replace(/^(https?)(\/\/)/i, "$1://");
+      console.warn("Fixed malformed URL (missing colon):", url, "->", fixed);
+      return fixed;
+    }
+
+    // Starts with 'http' but missing '://', try to insert it
+    if (/^https?/i.test(url) && !url.includes("://")) {
+      const fixed = url.replace(/^([a-z]+)(.*)/i, "$1://$2");
+      console.warn("Fixed malformed URL (missing ://):", url, "->", fixed);
+      return fixed;
+    }
+
+    // Relative path starting with '/'
+    if (url.startsWith("/")) return `${API_URL}${url}`;
+
+    // Otherwise assume relative resource path
+    return `${API_URL}/${url}`;
+  };
+
+  // 🎯 Fonction pour valider un ticket
+  const handleValidateTicket = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/chat/validate/${ticketId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur validation");
+      }
+
+      const data = await response.json();
+
+      // Afficher le message de confirmation
+      const confirmationMessage = {
+        role: "assistant",
+        content: data.response,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, confirmationMessage]);
+
+      // 🔊 Faire parler le bot
+      if (isSpeechEnabled && data.response) {
+        setTimeout(() => speakText(data.response), 300);
+      }
+    } catch (error) {
+      console.error("Erreur validation ticket:", error);
+      alert("Erreur lors de la validation du ticket. Veuillez réessayer.");
+    }
+  };
+
+  // 🎯 Fonction pour annuler/modifier un ticket
+  const handleCancelTicket = async (ticketId) => {
+    try {
+      const response = await fetch(`${API_URL}/api/chat/cancel/${ticketId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur annulation");
+      }
+
+      const data = await response.json();
+
+      // Afficher le message de réinitialisation
+      const resetMessage = {
+        role: "assistant",
+        content: data.response,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, resetMessage]);
+
+      // 🔊 Faire parler le bot
+      if (isSpeechEnabled && data.response) {
+        setTimeout(() => speakText(data.response), 300);
+      }
+    } catch (error) {
+      console.error("Erreur annulation ticket:", error);
+      alert("Erreur lors de l'annulation du ticket. Veuillez réessayer.");
+    }
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim() && uploadedFiles.length === 0) return;
 
     // Ajouter message utilisateur
     const userMessage = {
-      role: 'user',
+      role: "user",
       content: inputMessage,
+      language: selectedLanguage,
       files: uploadedFiles.length > 0 ? uploadedFiles : null,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage('');
+    setMessages((prev) => [...prev, userMessage]);
+    setInputMessage("");
     const currentFiles = [...uploadedFiles];
     setUploadedFiles([]);
     setIsTyping(true);
 
     try {
-      // Appel API backend
+      // Appel API backend (envoi de la langue sélectionnée)
       const response = await fetch(`${API_URL}/api/chat/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: inputMessage,
           session_id: sessionId,
-          photos: currentFiles.map(f => f.url)
-        })
+          photos: currentFiles.map((f) => getAbsoluteUrl(f.url)),
+          language: selectedLanguage,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Erreur réseau');
+        throw new Error("Erreur réseau");
       }
 
       const data = await response.json();
@@ -303,13 +418,13 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
       if (data.should_close_session) {
         // Afficher message d'au revoir
         const goodbyeMessage = {
-          role: 'assistant',
+          role: "assistant",
           content: data.response,
           language: data.language,
           conversation_type: data.conversation_type,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
-        setMessages(prev => [...prev, goodbyeMessage]);
+        setMessages((prev) => [...prev, goodbyeMessage]);
         setIsTyping(false);
 
         // 🔊 Faire parler le message d'au revoir
@@ -319,53 +434,60 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
         // Attendre 3 secondes puis effacer la conversation
         setTimeout(async () => {
-          console.log('👋 Clôture de la conversation - Effacement des messages');
+          console.log(
+            "👋 Clôture de la conversation - Effacement des messages"
+          );
           setMessages([]);
 
           // Appeler l'endpoint de suppression de session
           try {
             await fetch(`${API_URL}/api/chat/${sessionId}`, {
-              method: 'DELETE'
+              method: "DELETE",
             });
-            console.log('✅ Session backend supprimée');
+            console.log("✅ Session backend supprimée");
           } catch (error) {
-            console.error('❌ Erreur suppression session:', error);
+            console.error("❌ Erreur suppression session:", error);
           }
 
           // Réafficher le message d'accueil après 500ms
           setTimeout(() => {
-            const welcomeMessage = `Bonjour ! Bienvenue au Service Après-Vente de Meuble de France 🛠️
+            const welcomeMessagesReset = {
+              fr: `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
+Nous sommes à votre écoute pour un accompagnement personnalisé.
 
-Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votre réclamation.
+Pour vous aider rapidement, donnez-moi :
+• Votre nom
+• Votre numéro de commande
+• Une description de votre problème
 
-🎯 **Je vais vous aider à :**
-• Analyser votre problème automatiquement
-• Vérifier votre garantie instantanément
-• Collecter les preuves nécessaires (photos/vidéos)
-• Créer votre ticket SAV en quelques secondes
-• Calculer la priorité et le délai de traitement
+Vous pouvez écrire ou utiliser le microphone 🎤`,
+              en: `Hello and welcome to Mobilier de France customer support. We are here to help you.
 
-📋 **Pour commencer, veuillez me fournir :**
-1. **Votre nom complet**
-2. **Votre numéro de commande**
-3. **La description détaillée de votre problème**
-4. **Des photos du problème** (si possible)
+To assist quickly, please provide:
+• Your name
+• Your order number
+• A description of your issue
 
-**Exemple :**
-"Bonjour, je m'appelle Jean Dupont. Mon canapé OSLO a un pied cassé, c'est dangereux pour mon enfant! Numéro de commande: CMD-2024-12345"
+You can type or use the microphone 🎤`,
+              ar: `مرحبًا بك في خدمة عملاء مجموعة Mobilier de France. نحن هنا لمساعدتك.
 
-🎤 **Nouveauté : Communication vocale bidirectionnelle !**
-• Parlez avec le bouton microphone 🎤
-• J'écouterai votre problème
-• Je vous répondrai avec ma voix 🔊
+للمساعدة السريعة، يرجى تقديم:
+• اسمك
+• رقم الطلب
+• وصف المشكلة
 
-**Je m'occupe du reste automatiquement ! Présentez-vous et expliquez votre problème :**`;
+يمكنك الكتابة أو استخدام الميكروفون 🎤`,
+            };
+            const welcomeMessage =
+              welcomeMessagesReset[selectedLanguage] || welcomeMessagesReset.fr;
 
-            setMessages([{
-              role: 'assistant',
-              content: welcomeMessage,
-              timestamp: new Date()
-            }]);
+            setMessages([
+              {
+                role: "assistant",
+                content: welcomeMessage,
+                timestamp: new Date(),
+              },
+            ]);
           }, 500);
         }, 3000);
 
@@ -374,14 +496,17 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
       // Ajouter réponse assistant (traitement normal si pas de clôture)
       const assistantMessage = {
-        role: 'assistant',
+        role: "assistant",
         content: data.response,
         language: data.language,
         conversation_type: data.conversation_type,
-        timestamp: new Date()
+        timestamp: new Date(),
+        // 🎯 NOUVEAU: Ajouter les infos de validation
+        requires_validation: data.requires_validation,
+        ticket_id: data.ticket_id,
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
 
       // 🔊 Faire parler le bot automatiquement
       if (isSpeechEnabled && data.response) {
@@ -390,14 +515,17 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
           speakText(data.response);
         }, 300);
       }
-
     } catch (error) {
-      console.error('Erreur:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Désolé, j'ai rencontré un problème technique. Pouvez-vous réessayer ?",
-        timestamp: new Date()
-      }]);
+      console.error("Erreur:", error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content:
+            "Désolé, j'ai rencontré un problème technique. Pouvez-vous réessayer ?",
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
       setIsTyping(false);
     }
@@ -408,8 +536,14 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
     if (files.length === 0) return;
 
     // Validate files
-    const validFiles = files.filter(file => {
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'video/mp4', 'video/quicktime'];
+    const validFiles = files.filter((file) => {
+      const validTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "video/mp4",
+        "video/quicktime",
+      ];
       const maxSize = 10 * 1024 * 1024; // 10MB
 
       if (!validTypes.includes(file.type)) {
@@ -427,33 +561,32 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
     // Upload files
     const formData = new FormData();
-    validFiles.forEach(file => formData.append('files', file));
+    validFiles.forEach((file) => formData.append("files", file));
 
     try {
-      const response = await fetch(`${API_URL}/api/upload`, {
-        method: 'POST',
-        body: formData
+      const response = await fetch(`${API_URL}/api/upload/`, {
+        method: "POST",
+        body: formData,
       });
 
       if (!response.ok) {
-        throw new Error('Erreur upload');
+        throw new Error("Erreur upload");
       }
 
       const data = await response.json();
-      setUploadedFiles(prev => [...prev, ...data.files]);
-
+      setUploadedFiles((prev) => [...prev, ...data.files]);
     } catch (error) {
-      console.error('Erreur upload:', error);
-      alert('Erreur lors de l\'upload des fichiers');
+      console.error("Erreur upload:", error);
+      alert("Erreur lors de l'upload des fichiers");
     }
   };
 
   const removeFile = (index) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
@@ -462,7 +595,9 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
   // 🎤 Gérer l'enregistrement vocal - VERSION AMÉLIORÉE
   const toggleVoiceRecording = () => {
     if (!isVoiceSupported || !recognitionRef.current) {
-      alert('⚠️ Reconnaissance vocale non disponible\n\nUtilisez Chrome ou Edge pour cette fonctionnalité.');
+      alert(
+        "⚠️ Reconnaissance vocale non disponible\n\nUtilisez Chrome ou Edge pour cette fonctionnalité."
+      );
       return;
     }
 
@@ -472,39 +607,43 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
         isRecognitionActive.current = false;
         recognitionRef.current.stop();
         setIsRecording(false);
-        setTranscript('');
-        console.log('🛑 Enregistrement arrêté par l\'utilisateur');
+        setTranscript("");
+        console.log("🛑 Enregistrement arrêté par l'utilisateur");
       } catch (error) {
-        console.error('❌ Erreur arrêt:', error);
+        console.error("❌ Erreur arrêt:", error);
         setIsRecording(false);
-        setTranscript('');
+        setTranscript("");
       }
     } else {
       // ▶️ Démarrer l'enregistrement
       try {
         isRecognitionActive.current = true;
         recognitionRef.current.start();
-        console.log('▶️ Démarrage enregistrement...');
+        console.log("▶️ Démarrage enregistrement...");
       } catch (error) {
-        console.error('❌ Erreur démarrage:', error);
+        console.error("❌ Erreur démarrage:", error);
 
         // Si déjà en cours, arrêter puis redémarrer
-        if (error.message && error.message.includes('already')) {
+        if (error.message && error.message.includes("already")) {
           try {
             recognitionRef.current.stop();
             setTimeout(() => {
               try {
                 recognitionRef.current.start();
               } catch (e) {
-                console.error('❌ Redémarrage échoué:', e);
-                alert('Impossible de démarrer le microphone. Rechargez la page.');
+                console.error("❌ Redémarrage échoué:", e);
+                alert(
+                  "Impossible de démarrer le microphone. Rechargez la page."
+                );
               }
             }, 100);
           } catch (e) {
-            console.error('❌ Impossible d\'arrêter:', e);
+            console.error("❌ Impossible d'arrêter:", e);
           }
         } else {
-          alert('❌ Erreur microphone\n\nVérifiez que le microphone est autorisé dans votre navigateur.');
+          alert(
+            "❌ Erreur microphone\n\nVérifiez que le microphone est autorisé dans votre navigateur."
+          );
         }
         isRecognitionActive.current = false;
         setIsRecording(false);
@@ -513,13 +652,23 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
   };
 
   return (
-    <div className="flex flex-col h-full max-w-5xl mx-auto bg-gradient-to-br from-amber-50 to-orange-50">
+    <div
+      className="flex flex-col h-full max-w-5xl mx-auto"
+      style={{
+        background: "linear-gradient(to bottom right, #20253F, #2C3650)",
+      }}
+    >
       {/* Header */}
-      <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 shadow-lg">
+      <div
+        style={{ background: "linear-gradient(to right, #2C3650, #3A4560)" }}
+        className="text-white p-6 shadow-lg"
+      >
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">🛠️ Meuble de France - SAV</h1>
-            <p className="text-sm opacity-90 mt-1">Service Après-Vente Intelligent • Traitement automatisé en temps réel</p>
+            <h1 className="text-3xl font-bold">
+              🛠️ Mobilier de France - Accompagnement
+            </h1>
+            <p className="text-sm opacity-90 mt-1">{t("dashboard.title")}</p>
           </div>
 
           {/* 🔊 Contrôle vocal */}
@@ -528,28 +677,54 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
               onClick={toggleSpeech}
               className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
                 isSpeechEnabled
-                  ? 'bg-white text-red-600 hover:bg-gray-100'
-                  : 'bg-red-800 text-white hover:bg-red-900'
+                  ? "bg-white text-red-600 hover:bg-gray-100"
+                  : "bg-red-800 text-white hover:bg-red-900"
               }`}
-              title={isSpeechEnabled ? "Désactiver la voix du bot" : "Activer la voix du bot"}
+              title={
+                isSpeechEnabled
+                  ? t("chat.voice_title_on")
+                  : t("chat.voice_title_off")
+              }
             >
               {isSpeechEnabled ? (
                 <>
-                  <Volume2 className={`w-5 h-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
-                  <span className="text-sm">Voix ON</span>
-                  {isSpeaking && <span className="text-xs opacity-75">(parle...)</span>}
+                  <Volume2
+                    className={`w-5 h-5 ${isSpeaking ? "animate-pulse" : ""}`}
+                  />
+                  <span className="text-sm">{t("chat.voice_on")}</span>
+                  {isSpeaking && (
+                    <span className="text-xs opacity-75">(parle...)</span>
+                  )}
                 </>
               ) : (
                 <>
                   <VolumeX className="w-5 h-5" />
-                  <span className="text-sm">Voix OFF</span>
+                  <span className="text-sm">{t("chat.voice_off")}</span>
                 </>
               )}
             </button>
 
+            {/* Language selector */}
+            <select
+              value={selectedLanguage}
+              onChange={(e) => {
+                setLanguage(e.target.value);
+              }}
+              className="ml-3 bg-white text-sm text-gray-800 rounded px-3 py-2"
+              title={t("chat.language_label")}
+            >
+              {Object.entries(languages).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+
             <div className="text-right text-xs opacity-80 border-l border-white/30 pl-4">
               <p className="font-semibold">🎯 100% Automatisé</p>
-              <p className="text-xs">✅ Analyse TON • ✅ Garantie • ✅ Priorité</p>
+              <p className="text-xs">
+                ✅ Analyse TON • ✅ Garantie • ✅ Priorité
+              </p>
             </div>
           </div>
         </div>
@@ -560,33 +735,39 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
         {messages.map((msg, index) => (
           <div
             key={index}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} fade-in`}
+            className={`flex ${
+              msg.role === "user" ? "justify-end" : "justify-start"
+            } fade-in`}
           >
             <div
               className={`max-w-[75%] rounded-2xl p-4 shadow-md ${
-                msg.role === 'user'
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
-                  : 'bg-white text-gray-800 border border-gray-200'
+                msg.role === "user"
+                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
+                  : "bg-white text-gray-800 border border-gray-200"
               }`}
             >
               {/* Avatar */}
               <div className="flex items-start space-x-3">
-                {msg.role === 'assistant' && (
+                {msg.role === "assistant" && (
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                     M
                   </div>
                 )}
                 <div className="flex-1">
-                  <p className="whitespace-pre-line leading-relaxed">{msg.content}</p>
+                  <p className="whitespace-pre-line leading-relaxed">
+                    {msg.content}
+                  </p>
 
                   {/* Files attachées */}
                   {msg.files && msg.files.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {msg.files.map((file, idx) => (
                         <div key={idx} className="relative group">
-                          {file.type === 'jpg' || file.type === 'jpeg' || file.type === 'png' ? (
+                          {file.type === "jpg" ||
+                          file.type === "jpeg" ||
+                          file.type === "png" ? (
                             <img
-                              src={`${API_URL}${file.url}`}
+                              src={getAbsoluteUrl(file.url)}
                               alt={file.original_name}
                               className="w-24 h-24 object-cover rounded-lg border-2 border-white"
                             />
@@ -600,22 +781,65 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
                     </div>
                   )}
 
+                  {/* 🎯 NOUVEAU: Boutons de validation */}
+                  {msg.role === "assistant" &&
+                    msg.requires_validation &&
+                    msg.ticket_id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <p className="text-sm font-semibold text-gray-700 mb-3">
+                          {t("chat.validate_prompt")}
+                        </p>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => handleValidateTicket(msg.ticket_id)}
+                            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                          >
+                            {t("chat.btn_validate")}
+                          </button>
+                          <button
+                            onClick={() => handleCancelTicket(msg.ticket_id)}
+                            className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                          >
+                            {t("chat.btn_modify")}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          {t("chat.validate_hint")}
+                        </p>
+                      </div>
+                    )}
+
                   {/* Metadata */}
-                  <div className={`flex items-center justify-between mt-2 text-xs ${
-                    msg.role === 'user' ? 'text-white/70' : 'text-gray-500'
-                  }`}>
+                  <div
+                    className={`flex items-center justify-between mt-2 text-xs ${
+                      msg.role === "user" ? "text-white/70" : "text-gray-500"
+                    }`}
+                  >
                     <span>
-                      {msg.timestamp.toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                      {msg.timestamp.toLocaleTimeString(
+                        msg.language === "en"
+                          ? "en-US"
+                          : msg.language === "ar"
+                          ? "ar-SA"
+                          : localStorage.getItem("selectedLanguage") === "en"
+                          ? "en-US"
+                          : localStorage.getItem("selectedLanguage") === "ar"
+                          ? "ar-SA"
+                          : "fr-FR",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
                     </span>
-                    {msg.language && msg.language !== 'fr' && (
-                      <span className="ml-2">🌍 {msg.language.toUpperCase()}</span>
+                    {msg.language && (
+                      <span className="ml-2">
+                        🌍 {msg.language.toUpperCase()}
+                      </span>
                     )}
                   </div>
                 </div>
-                {msg.role === 'user' && (
+                {msg.role === "user" && (
                   <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-amber-600 font-bold flex-shrink-0">
                     V
                   </div>
@@ -635,8 +859,14 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
                 </div>
                 <div className="flex space-x-2">
                   <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                  <div
+                    className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.1s" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"
+                    style={{ animationDelay: "0.2s" }}
+                  ></div>
                 </div>
               </div>
             </div>
@@ -656,9 +886,11 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
             {uploadedFiles.map((file, index) => (
               <div key={index} className="relative group flex-shrink-0">
                 <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-amber-500">
-                  {file.type === 'jpg' || file.type === 'jpeg' || file.type === 'png' ? (
+                  {file.type === "jpg" ||
+                  file.type === "jpeg" ||
+                  file.type === "png" ? (
                     <img
-                      src={`${API_URL}${file.url}`}
+                      src={getAbsoluteUrl(file.url)}
                       alt={file.original_name}
                       className="w-full h-full object-cover"
                     />
@@ -687,16 +919,40 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
       <div className="bg-white p-6 border-t border-gray-200 shadow-lg">
         {/* 🎤 Recording Indicator - VERSION AMÉLIORÉE */}
         {isRecording && (
-          <div className="mb-4 p-4 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-300 rounded-xl shadow-lg">
+          <div
+            className="mb-4 p-4 border-2 rounded-xl shadow-lg"
+            style={{
+              background:
+                "linear-gradient(to right, rgba(44, 54, 80, 0.1), rgba(58, 69, 96, 0.1))",
+              borderColor: "#2C3650",
+            }}
+          >
             <div className="flex items-center space-x-3 mb-2">
               <div className="flex space-x-1">
-                <div className="w-2 h-6 bg-red-500 rounded animate-pulse" style={{animationDelay: '0s'}}></div>
-                <div className="w-2 h-8 bg-red-500 rounded animate-pulse" style={{animationDelay: '0.1s'}}></div>
-                <div className="w-2 h-6 bg-red-500 rounded animate-pulse" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-10 bg-red-500 rounded animate-pulse" style={{animationDelay: '0.3s'}}></div>
-                <div className="w-2 h-6 bg-red-500 rounded animate-pulse" style={{animationDelay: '0.4s'}}></div>
+                <div
+                  className="w-2 h-6 bg-red-500 rounded animate-pulse"
+                  style={{ animationDelay: "0s" }}
+                ></div>
+                <div
+                  className="w-2 h-8 bg-red-500 rounded animate-pulse"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-2 h-6 bg-red-500 rounded animate-pulse"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+                <div
+                  className="w-2 h-10 bg-red-500 rounded animate-pulse"
+                  style={{ animationDelay: "0.3s" }}
+                ></div>
+                <div
+                  className="w-2 h-6 bg-red-500 rounded animate-pulse"
+                  style={{ animationDelay: "0.4s" }}
+                ></div>
               </div>
-              <span className="text-red-700 font-bold text-lg">🎤 Écoute en cours...</span>
+              <span className="text-red-700 font-bold text-lg">
+                🎤 Écoute en cours...
+              </span>
               <button
                 onClick={toggleVoiceRecording}
                 className="ml-auto bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -706,12 +962,18 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
             </div>
             {transcript && (
               <div className="mt-2 p-3 bg-white rounded-lg border border-red-200">
-                <p className="text-sm text-gray-500 mb-1">Transcription en direct:</p>
-                <p className="text-gray-800 font-medium italic">"{transcript}"</p>
+                <p className="text-sm text-gray-500 mb-1">
+                  Transcription en direct:
+                </p>
+                <p className="text-gray-800 font-medium italic">
+                  "{transcript}"
+                </p>
               </div>
             )}
             {!transcript && (
-              <p className="text-sm text-gray-600 italic">Parlez maintenant... Le texte apparaîtra ici en temps réel</p>
+              <p className="text-sm text-gray-600 italic">
+                Parlez maintenant... Le texte apparaîtra ici en temps réel
+              </p>
             )}
           </div>
         )}
@@ -740,10 +1002,14 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
               onClick={toggleVoiceRecording}
               className={`relative p-3 rounded-full transition-all flex-shrink-0 shadow-lg ${
                 isRecording
-                  ? 'bg-red-500 hover:bg-red-600 text-white ring-4 ring-red-200 animate-pulse'
-                  : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white'
+                  ? "bg-red-500 hover:bg-red-600 text-white ring-4 ring-red-200 animate-pulse"
+                  : "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
               }`}
-              title={isRecording ? "⛔ Arrêter l'enregistrement vocal" : "🎤 Parler au lieu de taper"}
+              title={
+                isRecording
+                  ? "⛔ Arrêter l'enregistrement vocal"
+                  : "🎤 Parler au lieu de taper"
+              }
             >
               {isRecording ? (
                 <>
@@ -766,11 +1032,12 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Nom complet + Problème + N° commande... (Ex: Jean Dupont, mon canapé OSLO a un pied cassé, CMD-2024-12345)"
-              className="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
+              className="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
               rows="1"
               style={{
-                minHeight: '50px',
-                maxHeight: '150px'
+                minHeight: "50px",
+                maxHeight: "150px",
+                color: "#1F2937",
               }}
             />
           </div>
@@ -781,8 +1048,8 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
             disabled={!inputMessage.trim() && uploadedFiles.length === 0}
             className={`p-3 rounded-full flex-shrink-0 transition-all ${
               inputMessage.trim() || uploadedFiles.length > 0
-                ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
             }`}
           >
             {isTyping ? (
@@ -795,7 +1062,9 @@ Je suis votre assistant SAV intelligent et je suis là pour vous aider avec votr
 
         {/* Info Text */}
         <p className="text-xs text-gray-500 mt-3 text-center">
-          🔒 Données sécurisées • ⚡ Réponse immédiate • 🎤 Conversation vocale complète • 🔊 Le bot vous parle • 🎯 Analyse automatique du TON et PRIORITÉ • 🛡️ Vérification garantie instantanée
+          🔒 Données sécurisées • ⚡ Réponse immédiate • 🎤 Conversation vocale
+          complète • 🔊 Le bot vous parle • 🎯 Analyse automatique du TON et
+          PRIORITÉ • 🛡️ Vérification garantie instantanée
         </p>
         {isSpeaking && (
           <p className="text-xs text-blue-600 font-medium mt-2 text-center animate-pulse">

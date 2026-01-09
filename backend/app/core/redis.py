@@ -229,9 +229,13 @@ class RedisCache(BaseCache):
     async def keys(self, pattern: str) -> list:
         try:
             client = await self._get_client()
-            return await client.keys(pattern)
+            keys = []
+            # Use SCAN/scan_iter to avoid blocking Redis in production
+            async for key in client.scan_iter(match=pattern):
+                keys.append(key)
+            return keys
         except Exception as e:
-            logger.error(f"Redis KEYS error: {e}")
+            logger.error(f"Redis SCAN error: {e}")
             return []
 
     async def close(self) -> None:
