@@ -25,6 +25,7 @@ from app.core.redis import CacheManager
 from app.core.circuit_breaker import get_circuit_stats
 from app.core.slow_query_logger import get_query_stats
 from app.core.memory_monitor import get_memory_status, get_memory_usage, trigger_garbage_collection
+from app.core.env_validator import validate_environment
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
@@ -47,6 +48,19 @@ async def lifespan(app: FastAPI):
     logger.info(f"Debug mode: {settings.DEBUG}")
     logger.info(f"Environment: {'DEVELOPMENT' if settings.DEBUG else 'PRODUCTION'}")
     logger.info("=" * 60)
+
+    # Validate environment variables first
+    try:
+        validation_summary = validate_environment()
+        logger.info(
+            f"✅ Environment validation passed: "
+            f"{validation_summary['total_passed']} checks, "
+            f"{validation_summary['total_warnings']} warnings"
+        )
+    except Exception as e:
+        logger.critical(f"❌ Environment validation failed: {e}")
+        logger.critical("Application cannot start with invalid configuration")
+        raise
 
     # Track initialization failures
     init_failures = []
@@ -521,6 +535,35 @@ async def garbage_collect():
         "gc_result": result,
         "timestamp": datetime.now().isoformat()
     }
+
+
+@app.get("/env-status", tags=["Health"])
+async def environment_status():
+    """
+    Environment variable validation status.
+    Re-runs validation checks and returns current configuration status.
+    Useful for debugging configuration issues.
+    """
+    try:
+        summary = validate_environment()
+        return {
+            "valid": summary["valid"],
+            "errors": summary["errors"],
+            "warnings": summary["warnings"],
+            "passed_checks": summary["passed_checks"],
+            "summary": {
+                "total_errors": summary["total_errors"],
+                "total_warnings": summary["total_warnings"],
+                "total_passed": summary["total_passed"]
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "valid": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 
 @app.exception_handler(Exception)
