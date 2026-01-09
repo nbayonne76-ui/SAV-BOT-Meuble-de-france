@@ -118,9 +118,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       } catch (err) {
         console.error("❌ Permission microphone refusée:", err);
         setMicPermission("denied");
-        setError(
-          "Autorisation du microphone refusée. Veuillez autoriser l'accès au microphone dans les paramètres de votre navigateur."
-        );
+        setError(t("chat.alert_microphone_denied"));
       }
     };
 
@@ -146,16 +144,13 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       setIsActive(true);
 
       // Dire bonjour automatiquement avec le nouveau message client
-      await speakAndAddToHistory(
-        "assistant",
-        "Bonjour et bienvenue au service clientèle du groupe Mobilier de France. Nous sommes à votre écoute pour un accompagnement personnalisé. Donnez-moi votre nom, votre numéro de commande, et une description de votre problème."
-      );
+      await speakAndAddToHistory("assistant", t("chat.welcome.long"));
 
       // Démarrer l'enregistrement après le message de bienvenue
       setTimeout(() => startRecording(stream), 500);
     } catch (err) {
       console.error("Erreur accès microphone:", err);
-      setError("Impossible d'accéder au microphone. Vérifiez les permissions.");
+      setError(t("chat.alert_microphone_denied"));
     }
   };
 
@@ -237,7 +232,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       if (audioBlob.size > 500) {
         await processAudio(audioBlob);
       } else {
-        console.log("Enregistrement trop court, redémarrage...");
+        console.log(t("voice.processing.recording_too_short"));
         // Reprendre l'enregistrement si trop court
         if (isActive) {
           startRecording(stream);
@@ -279,7 +274,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
 
     try {
       // Étape 1: Transcription avec Whisper
-      setProcessingStep("Transcription en cours...");
+      setProcessingStep(t("voice.processing.transcription"));
       const transcript = await transcribeAudio(audioBlob);
 
       if (!transcript || transcript.trim().length === 0) {
@@ -294,7 +289,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       addToHistory("user", transcript);
 
       // Étape 2: Obtenir la réponse du chatbot
-      setProcessingStep("Génération de la réponse...");
+      setProcessingStep(t("voice.processing.generating"));
       const chatData = await getChatResponse(transcript);
 
       // NE PAS vider les fichiers uploadés ici - ils seront vidés après la création du ticket
@@ -303,7 +298,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       if (chatData.ticket_data) {
         setPendingTicket(chatData.ticket_data);
         // Dire le récapitulatif vocalement
-        setProcessingStep("Synthèse vocale du récapitulatif...");
+        setProcessingStep(t("voice.processing.summary_synthesis"));
         await speakAndAddToHistory("assistant", chatData.response, false);
         // L'enregistrement reprendra automatiquement dans le finally pour écouter "oui" ou "non"
       }
@@ -331,16 +326,14 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
         return;
       } else {
         // Étape 4: Synthèse vocale et lecture pour les autres messages
-        setProcessingStep("Synthèse vocale...");
+        setProcessingStep(t("voice.processing.synthesis"));
         await speakAndAddToHistory("assistant", chatData.response, false);
       }
     } catch (err) {
       console.error("❌ Erreur traitement complète:", err);
       console.error("❌ Stack trace:", err.stack);
       console.error("❌ Message:", err.message);
-      setError(
-        `Erreur de traitement: ${err.message}. Vérifiez la console (F12) pour plus de détails.`
-      );
+      setError(t("chat.error_general"));
     } finally {
       setIsProcessing(false);
       setProcessingStep("");
@@ -366,7 +359,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
     });
 
     if (!response.ok) {
-      throw new Error("Erreur de transcription");
+      throw new Error(t("voice.error_transcription"));
     }
 
     const data = await response.json();
@@ -432,11 +425,15 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       const maxSize = 10 * 1024 * 1024; // 10MB
 
       if (!validTypes.includes(file.type)) {
-        alert(`Type de fichier non supporté: ${file.name}`);
+        alert(t("chat.upload_type_not_supported").replace("{name}", file.name));
         return false;
       }
       if (file.size > maxSize) {
-        alert(`Fichier trop volumineux: ${file.name} (max 10MB)`);
+        alert(
+          t("chat.upload_file_too_large")
+            .replace("{name}", file.name)
+            .replace("{max}", "10")
+        );
         return false;
       }
       return true;
@@ -473,7 +470,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       }
     } catch (error) {
       console.error("Erreur upload:", error);
-      setError("Erreur lors de l'upload des fichiers");
+      setError(t("chat.upload_error"));
     }
   };
 
@@ -548,7 +545,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
         });
 
         if (!response.ok) {
-          throw new Error("Erreur de synthèse vocale");
+          throw new Error(t("voice.error_tts"));
         }
 
         const audioBlob = await response.blob();
@@ -597,7 +594,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
         content,
         timestamp: new Date(),
         isTicketCreated,
-        isRecap: content.includes("Je récapitule"), // Marquer les récapitulatifs
+        isRecap: content.includes(t("chat.recap_trigger")), // Marquer les récapitulatifs
       },
     ]);
   };
@@ -609,7 +606,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
     if (!pendingTicket) return;
 
     setIsProcessing(true);
-    setProcessingStep("Création de la demande d'accompagnement...");
+    setProcessingStep(t("chat.creating_ticket"));
 
     try {
       // Créer le ticket avec les photos
@@ -620,8 +617,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
       await createTicket(ticketDataWithPhotos);
 
       // Message de confirmation
-      const confirmMessage = `Parfait ! Votre demande d'accompagnement a été créée avec succès. Vous pouvez la consulter dans le tableau de bord.`;
-      addToHistory("assistant", confirmMessage, true);
+      addToHistory("assistant", t("chat.confirm_ticket_success"), true);
 
       // Réinitialiser
       setPendingTicket(null);
@@ -647,10 +643,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
     setPendingTicket(null);
 
     // Message d'annulation
-    addToHistory(
-      "assistant",
-      "D'accord, recommençons. Décrivez-moi votre problème."
-    );
+    addToHistory("assistant", t("chat.cancel_restart"));
 
     // Reprendre l'enregistrement
     if (isActive && mediaRecorderRef.current?.stream) {
@@ -712,11 +705,9 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
           style={{ fontFamily: "Segoe UI, sans-serif" }}
         >
           <Phone className="w-8 h-8 mr-3" />
-          Assistant Vocal d'Accompagnement - Mode Conversationnel
+          {t("chat.header_title")}
         </h1>
-        <p className="text-sm opacity-90 mt-1">
-          BB Expansion Mobilier de France - Clientèle groupe à votre écoute
-        </p>
+        <p className="text-sm opacity-90 mt-1">{t("chat.header_subtitle")}</p>
       </div>
 
       {/* Message d'état du microphone */}
@@ -728,7 +719,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
               <div className="bg-green-50 border-l-4 border-green-500 p-3 rounded-r-lg">
                 <p className="text-green-800 text-sm font-semibold flex items-center">
                   <span className="mr-2">✅</span>
-                  Microphone autorisé - Prêt à démarrer
+                  {t("chat.mic_allowed")}
                 </p>
               </div>
             )}
@@ -736,8 +727,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
               <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded-r-lg">
                 <p className="text-red-800 text-sm font-semibold flex items-center">
                   <span className="mr-2">❌</span>
-                  Microphone bloqué - Veuillez autoriser l'accès dans les
-                  paramètres du navigateur
+                  {t("chat.mic_blocked")}
                 </p>
               </div>
             )}
@@ -758,17 +748,17 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
           >
             <Phone className="w-7 h-7 inline mr-3" />
             {micPermission === null
-              ? "Vérification du microphone..."
+              ? t("chat.mic_checking")
               : micPermission === "granted"
-              ? "Démarrer la Conversation"
-              : "Microphone non autorisé"}
+              ? t("chat.start_button_start")
+              : t("chat.start_button_not_allowed")}
           </button>
           <p className="text-gray-600 mt-3 text-sm">
             {micPermission === "granted"
-              ? "Cliquez pour commencer • L'enregistrement démarre automatiquement"
+              ? t("chat.start_helper_granted")
               : micPermission === "denied"
-              ? "Autorisez le microphone pour continuer"
-              : "Autorisation du microphone en cours..."}
+              ? t("chat.start_helper_denied")
+              : t("chat.start_helper_checking")}
           </p>
         </div>
       )}
@@ -782,44 +772,42 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
               <Info className="w-6 h-6 text-amber-600 mr-3 flex-shrink-0 mt-1" />
               <div className="w-full">
                 <h3 className="font-bold text-amber-900 mb-3">
-                  ⚠️ Conseils pour une conversation réussie
+                  ⚠️ {t("chat.tips_title")}
                 </h3>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="text-xs">
                     <p className="text-amber-900 font-semibold">
-                      ✓ Parlez clairement
+                      ✓ {t("chat.tips_speak_clearly")}
                     </p>
                     <p className="text-amber-800">
-                      Articulez bien, pas trop vite
+                      {t("chat.tips_speak_clearly_desc")}
                     </p>
                   </div>
 
                   <div className="text-xs">
                     <p className="text-amber-900 font-semibold">
-                      ✓ Attendez la réponse
+                      ✓ {t("chat.tips_wait_response")}
                     </p>
                     <p className="text-amber-800">
-                      Patientez 1-2 secondes entre chaque échange
+                      {t("chat.tips_wait_response_desc")}
                     </p>
                   </div>
 
                   <div className="text-xs">
                     <p className="text-amber-900 font-semibold">
-                      ✓ Parlez naturellement
+                      ✓ {t("chat.tips_speak_naturally")}
                     </p>
                     <p className="text-amber-800">
-                      Vous pouvez tout dire en une fois
+                      {t("chat.tips_speak_naturally_desc")}
                     </p>
                   </div>
 
                   <div className="text-xs">
                     <p className="text-amber-900 font-semibold">
-                      ✓ Arrêt manuel
+                      ✓ {t("chat.tips_manual_stop")}
                     </p>
-                    <p className="text-amber-800">
-                      Cliquez sur "Arrêter" quand vous avez fini (30s max)
-                    </p>
+                    <p className="text-amber-800">{t("chat.recording_help")}</p>
                   </div>
                 </div>
               </div>
@@ -832,7 +820,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
               <Phone className="w-6 h-6 text-green-600 mr-3 flex-shrink-0 mt-1" />
               <div className="w-full">
                 <h3 className="font-bold text-green-900 mb-3">
-                  📋 Exemple de conversation
+                  📋 {t("chat.example_title")}
                 </h3>
 
                 <div className="text-xs space-y-2">
@@ -841,7 +829,8 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                       1
                     </div>
                     <p className="text-gray-700">
-                      <strong>Bot:</strong> "Bonjour ! Quel est votre nom ?"
+                      <strong>{t("chat.example_bot")}</strong> "
+                      {t("chat.example_bot_greeting")}"
                     </p>
                   </div>
                   <div className="flex items-center">
@@ -849,8 +838,8 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                       2
                     </div>
                     <p className="text-gray-700">
-                      <strong>Vous:</strong> "Marie Dupont, mon canapé OSLO
-                      CMD-2024-12345 a un pied cassé"
+                      <strong>{t("chat.example_user")}</strong> "
+                      {t("chat.example_user_input")}"
                     </p>
                   </div>
                   <div className="flex items-center">
@@ -858,7 +847,8 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                       3
                     </div>
                     <p className="text-gray-700">
-                      <strong>Bot:</strong> Récapitulatif complet
+                      <strong>{t("chat.example_bot")}</strong>{" "}
+                      {t("chat.recap_label")} {t("chat.example_bot_recap")}
                     </p>
                   </div>
                   <div className="flex items-center">
@@ -866,12 +856,13 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                       4
                     </div>
                     <p className="text-gray-700">
-                      <strong>Vous:</strong> "Oui"
+                      <strong>{t("chat.example_user")}</strong> "
+                      {t("chat.example_user_confirm")}"
                     </p>
                   </div>
                   <div className="bg-green-100 p-2 rounded border border-green-400 mt-2">
                     <p className="text-green-900 font-bold text-center">
-                      ✅ Demande d'accompagnement créée automatiquement !
+                      {t("chat.auto_ticket_created")}
                     </p>
                   </div>
                 </div>
@@ -887,10 +878,10 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
           <button
             onClick={() => fileInputRef.current?.click()}
             className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white p-4 rounded-full shadow-2xl transition-all transform hover:scale-110 flex items-center space-x-2"
-            title="Ajouter des photos"
+            title={t("chat.add_photos")}
           >
             <Camera className="w-6 h-6" />
-            <span className="font-medium">Ajouter Photos</span>
+            <span className="font-medium">{t("chat.add_photos")}</span>
           </button>
           {uploadedFiles.length > 0 && (
             <div className="mt-2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full text-center">
@@ -916,7 +907,10 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-bold text-gray-700 flex items-center">
               <Camera className="w-4 h-4 mr-2 text-blue-600" />
-              Photos uploadées ({uploadedFiles.length})
+              {t("chat.photos_uploaded").replace(
+                "{count}",
+                String(uploadedFiles.length)
+              )}
             </p>
           </div>
           <div className="flex space-x-3 overflow-x-auto pb-2">
@@ -940,7 +934,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                 <button
                   onClick={() => removeFile(index)}
                   className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
-                  title="Supprimer"
+                  title={t("chat.delete")}
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -981,15 +975,17 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                 }`}
               >
                 <p className="font-medium mb-1 flex items-center">
-                  {msg.role === "user" ? "👤 Vous" : "🤖 Assistant"}
+                  {msg.role === "user"
+                    ? t("chat.user_label")
+                    : t("chat.assistant_label")}
                   {isRecap && (
                     <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-1 rounded-full">
-                      Récapitulatif
+                      {t("chat.recap_label")}
                     </span>
                   )}
                   {isTicketConfirmation && (
                     <span className="ml-2 text-xs bg-white text-green-600 px-2 py-1 rounded-full font-bold">
-                      ✅ Ticket créé !
+                      {t("chat.ticket_created")}
                     </span>
                   )}
                 </p>
@@ -1066,7 +1062,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                         <span className="text-gray-500 text-sm">/ 0:30</span>
                       </div>
                       <span className="text-red-600 font-semibold ml-2">
-                        Enregistrement...
+                        {t("chat.recording_label")}
                       </span>
                     </div>
 
@@ -1080,7 +1076,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                       }}
                       className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-lg hover:scale-105"
                     >
-                      ⏹ Arrêter
+                      ⏹ {t("chat.stop_button")}
                     </button>
                   </div>
 
@@ -1109,7 +1105,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
 
                   {/* Message d'aide */}
                   <p className="text-xs text-gray-500 text-center">
-                    Parlez puis cliquez sur "Arrêter" • Limite: 30 secondes
+                    {t("chat.recording_help")}
                   </p>
                 </div>
               )}
@@ -1127,7 +1123,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
                 <div className="flex items-center space-x-3 py-1">
                   <Volume2 className="w-6 h-6 text-green-600 animate-pulse" />
                   <span className="text-green-600 font-semibold">
-                    Je parle...
+                    {t("chat.speaking_label")}
                   </span>
                 </div>
               )}
@@ -1152,7 +1148,7 @@ const VoiceChatWhisper = ({ onTicketCreated }) => {
             className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center"
           >
             <PhoneOff className="w-6 h-6 mr-2" />
-            Terminer la Conversation
+            {t("chat.end_conversation")}
           </button>
         </div>
       )}

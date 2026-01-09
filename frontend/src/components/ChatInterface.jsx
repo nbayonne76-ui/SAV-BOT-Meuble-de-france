@@ -1,5 +1,5 @@
 // frontend/src/components/ChatInterface.jsx
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Send,
   Camera,
@@ -25,14 +25,12 @@ const ChatInterface = () => {
   const [transcript, setTranscript] = useState("");
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(false); // Activer voix par défaut
   const [isSpeaking, setIsSpeaking] = useState(false);
-
-  // Language management (global)
   const { language, setLanguage, t, languages } = useLanguage();
   const selectedLanguage = language;
+  // Language management (global)
   const languageLocales = Object.fromEntries(
     Object.entries(languages).map(([k, v]) => [k, v.locale])
   );
-
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -123,11 +121,9 @@ const ChatInterface = () => {
       if (event.error === "no-speech" || event.error === "aborted") {
         console.log("🔇 Pas de parole détectée ou arrêt manuel");
       } else if (event.error === "not-allowed") {
-        alert(
-          "🚫 Accès au microphone refusé.\n\nVeuillez autoriser l'accès dans les paramètres de votre navigateur."
-        );
+        alert(t("chat.alert_microphone_denied"));
       } else if (event.error === "network") {
-        alert("🌐 Erreur réseau. Vérifiez votre connexion internet.");
+        alert(t("chat.alert_network"));
       } else {
         console.error("Erreur inconnue:", event.error);
       }
@@ -342,7 +338,7 @@ const ChatInterface = () => {
       }
     } catch (error) {
       console.error("Erreur validation ticket:", error);
-      alert("Erreur lors de la validation du ticket. Veuillez réessayer.");
+      alert(t("chat.error_ticket_validation"));
     }
   };
 
@@ -374,7 +370,7 @@ const ChatInterface = () => {
       }
     } catch (error) {
       console.error("Erreur annulation ticket:", error);
-      alert("Erreur lors de l'annulation du ticket. Veuillez réessayer.");
+      alert(t("chat.error_ticket_cancel"));
     }
   };
 
@@ -452,31 +448,9 @@ const ChatInterface = () => {
           // Réafficher le message d'accueil après 500ms
           setTimeout(() => {
             const welcomeMessagesReset = {
-              fr: `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.
-Nous sommes à votre écoute pour un accompagnement personnalisé.
-
-Pour vous aider rapidement, donnez-moi :
-• Votre nom
-• Votre numéro de commande
-• Une description de votre problème
-
-Vous pouvez écrire ou utiliser le microphone 🎤`,
-              en: `Hello and welcome to Mobilier de France customer support. We are here to help you.
-
-To assist quickly, please provide:
-• Your name
-• Your order number
-• A description of your issue
-
-You can type or use the microphone 🎤`,
-              ar: `مرحبًا بك في خدمة عملاء مجموعة Mobilier de France. نحن هنا لمساعدتك.
-
-للمساعدة السريعة، يرجى تقديم:
-• اسمك
-• رقم الطلب
-• وصف المشكلة
-
-يمكنك الكتابة أو استخدام الميكروفون 🎤`,
+              fr: t("chat.welcome_message_reset"),
+              en: t("chat.welcome_message_reset"),
+              ar: t("chat.welcome_message_reset"),
             };
             const welcomeMessage =
               welcomeMessagesReset[selectedLanguage] || welcomeMessagesReset.fr;
@@ -521,8 +495,7 @@ You can type or use the microphone 🎤`,
         ...prev,
         {
           role: "assistant",
-          content:
-            "Désolé, j'ai rencontré un problème technique. Pouvez-vous réessayer ?",
+          content: t("chat.error_problem"),
           timestamp: new Date(),
         },
       ]);
@@ -547,11 +520,15 @@ You can type or use the microphone 🎤`,
       const maxSize = 10 * 1024 * 1024; // 10MB
 
       if (!validTypes.includes(file.type)) {
-        alert(`Type de fichier non supporté: ${file.name}`);
+        alert(t("chat.upload_type_not_supported").replace("{name}", file.name));
         return false;
       }
       if (file.size > maxSize) {
-        alert(`Fichier trop volumineux: ${file.name} (max 10MB)`);
+        alert(
+          t("chat.upload_file_too_large")
+            .replace("{name}", file.name)
+            .replace("{max}", "10")
+        );
         return false;
       }
       return true;
@@ -577,7 +554,7 @@ You can type or use the microphone 🎤`,
       setUploadedFiles((prev) => [...prev, ...data.files]);
     } catch (error) {
       console.error("Erreur upload:", error);
-      alert("Erreur lors de l'upload des fichiers");
+      alert(t("chat.upload_error"));
     }
   };
 
@@ -595,9 +572,7 @@ You can type or use the microphone 🎤`,
   // 🎤 Gérer l'enregistrement vocal - VERSION AMÉLIORÉE
   const toggleVoiceRecording = () => {
     if (!isVoiceSupported || !recognitionRef.current) {
-      alert(
-        "⚠️ Reconnaissance vocale non disponible\n\nUtilisez Chrome ou Edge pour cette fonctionnalité."
-      );
+      alert(t("chat.stt_not_available"));
       return;
     }
 
@@ -632,18 +607,14 @@ You can type or use the microphone 🎤`,
                 recognitionRef.current.start();
               } catch (e) {
                 console.error("❌ Redémarrage échoué:", e);
-                alert(
-                  "Impossible de démarrer le microphone. Rechargez la page."
-                );
+                alert(t("chat.error_mic_already_running"));
               }
             }, 100);
           } catch (e) {
             console.error("❌ Impossible d'arrêter:", e);
           }
         } else {
-          alert(
-            "❌ Erreur microphone\n\nVérifiez que le microphone est autorisé dans votre navigateur."
-          );
+          alert(t("chat.error_mic_not_allowed"));
         }
         isRecognitionActive.current = false;
         setIsRecording(false);
@@ -666,7 +637,7 @@ You can type or use the microphone 🎤`,
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">
-              🛠️ Mobilier de France - Accompagnement
+              {t("chat.header_main_title")}
             </h1>
             <p className="text-sm opacity-90 mt-1">{t("dashboard.title")}</p>
           </div>
@@ -693,7 +664,9 @@ You can type or use the microphone 🎤`,
                   />
                   <span className="text-sm">{t("chat.voice_on")}</span>
                   {isSpeaking && (
-                    <span className="text-xs opacity-75">(parle...)</span>
+                    <span className="text-xs opacity-75">
+                      {t("chat.voice_speaking_suffix")}
+                    </span>
                   )}
                 </>
               ) : (
@@ -704,27 +677,9 @@ You can type or use the microphone 🎤`,
               )}
             </button>
 
-            {/* Language selector */}
-            <select
-              value={selectedLanguage}
-              onChange={(e) => {
-                setLanguage(e.target.value);
-              }}
-              className="ml-3 bg-white text-sm text-gray-800 rounded px-3 py-2"
-              title={t("chat.language_label")}
-            >
-              {Object.entries(languages).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v.label}
-                </option>
-              ))}
-            </select>
-
             <div className="text-right text-xs opacity-80 border-l border-white/30 pl-4">
-              <p className="font-semibold">🎯 100% Automatisé</p>
-              <p className="text-xs">
-                ✅ Analyse TON • ✅ Garantie • ✅ Priorité
-              </p>
+              <p className="font-semibold">{t("chat.automation_label")}</p>
+              <p className="text-xs">{t("chat.automation_items")}</p>
             </div>
           </div>
         </div>
@@ -773,7 +728,7 @@ You can type or use the microphone 🎤`,
                             />
                           ) : (
                             <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-600">
-                              📹 Vidéo
+                              {t("chat.file_video_label")}
                             </div>
                           )}
                         </div>
@@ -880,7 +835,7 @@ You can type or use the microphone 🎤`,
       {uploadedFiles.length > 0 && (
         <div className="px-6 py-3 bg-white border-t border-gray-200">
           <p className="text-sm text-gray-600 mb-2 font-medium">
-            📎 Fichiers à envoyer ({uploadedFiles.length}):
+            {t("chat.files_to_send").replace("{count}", uploadedFiles.length)}
           </p>
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {uploadedFiles.map((file, index) => (
@@ -951,19 +906,19 @@ You can type or use the microphone 🎤`,
                 ></div>
               </div>
               <span className="text-red-700 font-bold text-lg">
-                🎤 Écoute en cours...
+                {t("chat.listening")}
               </span>
               <button
                 onClick={toggleVoiceRecording}
                 className="ml-auto bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
               >
-                ⛔ Arrêter
+                ⛔ {t("chat.stop_button")}
               </button>
             </div>
             {transcript && (
               <div className="mt-2 p-3 bg-white rounded-lg border border-red-200">
                 <p className="text-sm text-gray-500 mb-1">
-                  Transcription en direct:
+                  {t("chat.transcription_live_label")}
                 </p>
                 <p className="text-gray-800 font-medium italic">
                   "{transcript}"
@@ -972,7 +927,7 @@ You can type or use the microphone 🎤`,
             )}
             {!transcript && (
               <p className="text-sm text-gray-600 italic">
-                Parlez maintenant... Le texte apparaîtra ici en temps réel
+                {t("chat.speak_now")}
               </p>
             )}
           </div>
@@ -983,7 +938,7 @@ You can type or use the microphone 🎤`,
           <button
             onClick={() => fileInputRef.current?.click()}
             className="bg-amber-100 hover:bg-amber-200 text-amber-700 p-3 rounded-full transition-colors flex-shrink-0"
-            title="Ajouter des photos"
+            title={t("chat.add_photos")}
           >
             <Camera className="w-6 h-6" />
           </button>
@@ -1006,9 +961,7 @@ You can type or use the microphone 🎤`,
                   : "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
               }`}
               title={
-                isRecording
-                  ? "⛔ Arrêter l'enregistrement vocal"
-                  : "🎤 Parler au lieu de taper"
+                isRecording ? t("chat.stop_button") : t("chat.voice_mode_hint")
               }
             >
               {isRecording ? (
@@ -1031,7 +984,7 @@ You can type or use the microphone 🎤`,
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Nom complet + Problème + N° commande... (Ex: Jean Dupont, mon canapé OSLO a un pied cassé, CMD-2024-12345)"
+              placeholder={t("chat.placeholder")}
               className="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
               rows="1"
               style={{
@@ -1062,13 +1015,11 @@ You can type or use the microphone 🎤`,
 
         {/* Info Text */}
         <p className="text-xs text-gray-500 mt-3 text-center">
-          🔒 Données sécurisées • ⚡ Réponse immédiate • 🎤 Conversation vocale
-          complète • 🔊 Le bot vous parle • 🎯 Analyse automatique du TON et
-          PRIORITÉ • 🛡️ Vérification garantie instantanée
+          {t("chat.info_secure")}
         </p>
         {isSpeaking && (
           <p className="text-xs text-blue-600 font-medium mt-2 text-center animate-pulse">
-            🔊 Le bot est en train de parler... Écoutez sa réponse
+            {t("chat.bot_speaking")}
           </p>
         )}
       </div>
