@@ -16,6 +16,7 @@ from app.core.logging import setup_logging
 from app.core.middleware import setup_security_middleware
 from app.core.rate_limit import setup_rate_limiter
 from app.core.redis import CacheManager
+from app.core.circuit_breaker import get_circuit_stats
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
@@ -224,6 +225,32 @@ async def readiness_check():
     return {
         "ready": all_ready,
         "checks": checks
+    }
+
+
+@app.get("/circuit-breakers", tags=["Health"])
+async def circuit_breaker_status():
+    """
+    Circuit breaker status endpoint.
+    Returns statistics for all registered circuit breakers.
+    """
+    stats = get_circuit_stats()
+
+    # Calculate overall health
+    all_closed = all(
+        breaker["state"] == "closed"
+        for breaker in stats.values()
+    )
+
+    return {
+        "healthy": all_closed,
+        "breakers": stats,
+        "summary": {
+            "total": len(stats),
+            "closed": sum(1 for b in stats.values() if b["state"] == "closed"),
+            "open": sum(1 for b in stats.values() if b["state"] == "open"),
+            "half_open": sum(1 for b in stats.values() if b["state"] == "half_open")
+        }
     }
 
 

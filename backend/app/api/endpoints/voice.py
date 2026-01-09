@@ -17,6 +17,7 @@ import httpx
 
 from app.core.config import settings
 from app.core.chatbot_config import config as chatbot_config
+from app.core.circuit_breaker import CircuitBreakerManager, CircuitBreakerError
 from app.services.sav_workflow_engine import sav_workflow_engine
 from app.services.warranty_service import warranty_service
 from app.models.warranty import WarrantyType
@@ -209,23 +210,42 @@ async def transcribe_audio(
             temp_path = temp_file.name
 
         try:
-            # Transcription avec Whisper
+            # Transcription avec Whisper with circuit breaker protection
             logger.info("🎤 Transcription avec Whisper...")
-            with open(temp_path, "rb") as audio:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio,
-                    language="fr",  # Forcer le français pour meilleure précision
-                    response_format="verbose_json"
+
+            # Get circuit breaker for OpenAI Whisper
+            whisper_breaker = CircuitBreakerManager.get_breaker(
+                name="openai-whisper",
+                failure_threshold=5,
+                recovery_timeout=60,
+                timeout=30
+            )
+
+            async def call_whisper():
+                with open(temp_path, "rb") as audio:
+                    return client.audio.transcriptions.create(
+                        model="whisper-1",
+                        file=audio,
+                        language="fr",  # Forcer le français pour meilleure précision
+                        response_format="verbose_json"
+                    )
+
+            try:
+                transcript = await whisper_breaker.call(call_whisper)
+                logger.info(f"✅ Transcription: {transcript.text}")
+
+                return VoiceTranscriptionResponse(
+                    text=transcript.text,
+                    language=transcript.language if hasattr(transcript, 'language') else "fr",
+                    duration=transcript.duration if hasattr(transcript, 'duration') else None
                 )
 
-            logger.info(f"✅ Transcription: {transcript.text}")
-
-            return VoiceTranscriptionResponse(
-                text=transcript.text,
-                language=transcript.language if hasattr(transcript, 'language') else "fr",
-                duration=transcript.duration if hasattr(transcript, 'duration') else None
-            )
+            except CircuitBreakerError as e:
+                logger.error(f"Whisper circuit breaker is open: {e}")
+                raise HTTPException(
+                    status_code=503,
+                    detail="Service de transcription temporairement indisponible. Veuillez réessayer dans quelques instants."
+                )
 
         finally:
             # Nettoyer le fichier temporaire
@@ -380,19 +400,38 @@ Après avoir demandé "Puis-je faire autre chose pour vous ?", ÉCOUTER:
         messages.extend(request.conversation_history)
         messages.append({"role": "user", "content": request.message})
 
-        # Obtenir la réponse avec le modèle configuré
+        # Obtenir la réponse avec le modèle configuré with circuit breaker
         logger.info(f"🤖 Génération de la réponse avec {chatbot_config.MODELE_IA}...")
-        completion = client.chat.completions.create(
-            model=chatbot_config.MODELE_IA,  # gpt-3.5-turbo (configuré par le client)
-            messages=messages,
-            temperature=chatbot_config.TEMPERATURE,
-            max_tokens=chatbot_config.MAX_TOKENS,  # 300 tokens (~300 mots, réponses courtes)
-            presence_penalty=0.6,
-            frequency_penalty=0.3
+
+        # Get circuit breaker for OpenAI chat
+        gpt_breaker = CircuitBreakerManager.get_breaker(
+            name="openai-chat",
+            failure_threshold=5,
+            recovery_timeout=60,
+            timeout=30
         )
 
-        response_text = completion.choices[0].message.content
-        logger.info(f"✅ Réponse: {response_text}")
+        async def call_gpt():
+            return client.chat.completions.create(
+                model=chatbot_config.MODELE_IA,  # gpt-3.5-turbo (configuré par le client)
+                messages=messages,
+                temperature=chatbot_config.TEMPERATURE,
+                max_tokens=chatbot_config.MAX_TOKENS,  # 300 tokens (~300 mots, réponses courtes)
+                presence_penalty=0.6,
+                frequency_penalty=0.3
+            )
+
+        try:
+            completion = await gpt_breaker.call(call_gpt)
+            response_text = completion.choices[0].message.content
+            logger.info(f"✅ Réponse: {response_text}")
+
+        except CircuitBreakerError as e:
+            logger.error(f"OpenAI chat circuit breaker is open: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Service de chat temporairement indisponible. Veuillez réessayer dans quelques instants."
+            )
 
         # Détecter l'action et extraire les données du ticket
         action = None
@@ -444,25 +483,42 @@ async def text_to_speech(
     try:
         logger.info(f"🔊 Synthèse vocale: {text[:50]}... (voice: {voice})")
 
-        # Générer l'audio avec TTS
-        response = client.audio.speech.create(
-            model="tts-1",  # tts-1 est plus rapide, tts-1-hd est meilleure qualité
-            voice=voice,
-            input=text,
-            response_format="mp3",
-            speed=1.3  # Vitesse moyennement rapide pour meilleure expérience utilisateur
+        # Générer l'audio avec TTS with circuit breaker protection
+        tts_breaker = CircuitBreakerManager.get_breaker(
+            name="openai-tts",
+            failure_threshold=5,
+            recovery_timeout=60,
+            timeout=30
         )
 
-        logger.info("✅ Audio généré")
+        async def call_tts():
+            return client.audio.speech.create(
+                model="tts-1",  # tts-1 est plus rapide, tts-1-hd est meilleure qualité
+                voice=voice,
+                input=text,
+                response_format="mp3",
+                speed=1.3  # Vitesse moyennement rapide pour meilleure expérience utilisateur
+            )
 
-        # Streamer l'audio directement
-        return StreamingResponse(
-            iter([response.content]),
-            media_type="audio/mpeg",
-            headers={
-                "Content-Disposition": "inline; filename=speech.mp3"
-            }
-        )
+        try:
+            response = await tts_breaker.call(call_tts)
+            logger.info("✅ Audio généré")
+
+            # Streamer l'audio directement
+            return StreamingResponse(
+                iter([response.content]),
+                media_type="audio/mpeg",
+                headers={
+                    "Content-Disposition": "inline; filename=speech.mp3"
+                }
+            )
+
+        except CircuitBreakerError as e:
+            logger.error(f"TTS circuit breaker is open: {e}")
+            raise HTTPException(
+                status_code=503,
+                detail="Service de synthèse vocale temporairement indisponible. Veuillez réessayer dans quelques instants."
+            )
 
     except Exception as e:
         logger.error(f"❌ Erreur TTS: {e}")

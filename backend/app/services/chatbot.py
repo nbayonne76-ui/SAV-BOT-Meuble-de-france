@@ -9,6 +9,7 @@ from app.services.sav_knowledge import sav_kb
 from app.services.evidence_collector import evidence_collector
 from app.services.warranty_service import warranty_service
 from app.models.warranty import WarrantyType
+from app.core.circuit_breaker import CircuitBreakerManager, CircuitBreakerError
 
 logger = logging.getLogger(__name__)
 
@@ -467,17 +468,41 @@ Utilise ces infos pour réponse rapide et pertinente.
             ]
             messages.extend(self.conversation_history)
 
-            # Appel OpenAI API (run blocking SDK call in executor to avoid blocking event loop)
+            # Appel OpenAI API with circuit breaker protection
             import asyncio
             loop = asyncio.get_running_loop()
+
+            # Get circuit breaker for OpenAI (5 failures, 60s recovery, 30s timeout)
+            openai_breaker = CircuitBreakerManager.get_breaker(
+                name="openai",
+                failure_threshold=5,
+                recovery_timeout=60,
+                timeout=30
+            )
+
             try:
-                resp = await loop.run_in_executor(None, lambda: self.client.chat.completions.create(
-                    model="gpt-4o-mini",  # Changed from gpt-4 to save costs (200x cheaper!)
-                    messages=messages,
-                    max_tokens=1000,
-                    temperature=0.7
-                ))
+                # Wrap OpenAI call in circuit breaker
+                async def call_openai():
+                    return await loop.run_in_executor(None, lambda: self.client.chat.completions.create(
+                        model="gpt-4o-mini",  # Changed from gpt-4 to save costs (200x cheaper!)
+                        messages=messages,
+                        max_tokens=1000,
+                        temperature=0.7
+                    ))
+
+                resp = await openai_breaker.call(call_openai)
                 assistant_message = resp.choices[0].message.content if getattr(resp, 'choices', None) else str(resp)
+
+            except CircuitBreakerError as e:
+                logger.error(f"OpenAI circuit breaker is open: {e}")
+                # Fallback response when OpenAI is unavailable
+                error_messages = {
+                    "fr": "Je suis temporairement indisponible. Notre service technique est informé et travaille à résoudre le problème. Veuillez réessayer dans quelques instants.",
+                    "en": "I am temporarily unavailable. Our technical team has been notified and is working to resolve the issue. Please try again in a few moments.",
+                    "ar": "أنا غير متاح مؤقتًا. تم إبلاغ فريقنا الفني ويعمل على حل المشكلة. يرجى المحاولة مرة أخرى بعد لحظات."
+                }
+                assistant_message = error_messages.get(language, error_messages["fr"])
+
             except Exception as e:
                 logger.error(f"OpenAI call failed: {e}")
                 raise
