@@ -22,6 +22,8 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
+      console.log(`[Dashboard] Fetching tickets from: ${API_URL}/api/sav/tickets`);
+
       const response = await fetch(`${API_URL}/api/sav/tickets`, {
         method: "GET",
         headers: {
@@ -30,20 +32,28 @@ const Dashboard = () => {
         },
       });
 
+      console.log(`[Dashboard] Response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Dashboard] Error response:`, errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`[Dashboard] Response data:`, data);
+      console.log(`[Dashboard] Number of tickets:`, data.tickets ? data.tickets.length : 0);
 
       if (data.success) {
         setTickets(data.tickets || []);
         setError(null);
+        console.log(`[Dashboard] ✅ Successfully loaded ${data.tickets?.length || 0} tickets`);
       } else {
+        console.error(`[Dashboard] ❌ API returned success=false`);
         setError("Erreur lors du chargement des tickets");
       }
     } catch (err) {
-      console.error("Error:", err);
+      console.error("[Dashboard] ❌ Fetch error:", err);
       setError(`Erreur de connexion: ${err.message}`);
     } finally {
       setLoading(false);
