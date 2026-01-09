@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize database tables
     try:
-        init_db()
+        await init_db()
         logger.info("Database initialized successfully")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
@@ -87,7 +87,12 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error closing cache: {e}")
 
-    close_db()
+    # Close database connections
+    try:
+        await close_db()
+        logger.info("Database connections closed")
+    except Exception as e:
+        logger.error(f"Error closing database: {e}")
 
 
 # Create FastAPI app with conditional docs
@@ -195,8 +200,8 @@ async def readiness_check():
     try:
         from sqlalchemy import text
         from app.db.session import engine
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
     except Exception:
         db_ready = False
 

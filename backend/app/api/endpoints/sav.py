@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.sav_workflow_engine import sav_workflow_engine, SAVTicket
 from app.services.evidence_collector import evidence_collector, EvidenceType
@@ -56,7 +56,7 @@ class TicketStatusRequest(BaseModel):
 # ============ ENDPOINTS ============
 
 @router.post("/create-claim")
-async def create_claim(request: CreateClaimRequest, db: Session = Depends(get_db)):
+async def create_claim(request: CreateClaimRequest, db: AsyncSession = Depends(get_db)):
     """
     Crée une nouvelle réclamation SAV et lance le workflow automatique (avec persistence DB)
 
@@ -313,7 +313,7 @@ async def get_evidence_requirements(problem_category: str, priority: str = "P2")
 
 
 @router.get("/tickets")
-async def get_all_tickets(db: Session = Depends(get_db)):
+async def get_all_tickets(db: AsyncSession = Depends(get_db)):
     """
     NOUVEAU: Récupère tous les tickets SAV pour le tableau de bord (depuis la base de données)
 
@@ -325,7 +325,7 @@ async def get_all_tickets(db: Session = Depends(get_db)):
         logger.info("Récupération de tous les tickets SAV depuis la base de données")
 
         # Récupérer les tickets depuis la base de données
-        db_tickets = ticket_repository.get_all(db, limit=100)
+        db_tickets = await ticket_repository.get_all(db, limit=100)
 
         tickets_list = []
 
@@ -382,7 +382,7 @@ async def get_all_tickets(db: Session = Depends(get_db)):
 
 
 @router.get("/ticket/{ticket_id}/dossier")
-async def generate_client_dossier(ticket_id: str, db: Session = Depends(get_db)):
+async def generate_client_dossier(ticket_id: str, db: AsyncSession = Depends(get_db)):
     """
     NOUVEAU: Génère le dossier client complet au format structuré (depuis la base de données)
 
@@ -394,7 +394,7 @@ async def generate_client_dossier(ticket_id: str, db: Session = Depends(get_db))
         logger.info(f"Génération du dossier client pour: {ticket_id}")
 
         # Récupérer depuis la base de données
-        db_ticket = ticket_repository.get_by_id(db, ticket_id)
+        db_ticket = await ticket_repository.get_by_id(db, ticket_id)
 
         if not db_ticket:
             raise HTTPException(status_code=404, detail=f"Ticket {ticket_id} non trouvé")

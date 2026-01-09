@@ -1,69 +1,93 @@
 # backend/app/db/session.py
 """
-Database session management
+Database session management with async support
 """
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
-from typing import Generator
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.pool import StaticPool, NullPool
+from typing import AsyncGenerator
 
 from app.core.config import settings
 
-# Create engine based on database URL
+# Create async engine based on database URL
+# Convert sync URLs to async variants
+async_database_url = settings.DATABASE_URL
+
 if settings.DATABASE_URL.startswith("sqlite"):
+    # SQLite async - use aiosqlite driver
+    async_database_url = settings.DATABASE_URL.replace("sqlite:///", "sqlite+aiosqlite:///")
     # SQLite-specific configuration for development
-    engine = create_engine(
-        settings.DATABASE_URL,
+    engine = create_async_engine(
+        async_database_url,
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
         echo=settings.DEBUG
     )
+elif settings.DATABASE_URL.startswith("postgresql+psycopg2://"):
+    # PostgreSQL async - use asyncpg driver
+    async_database_url = settings.DATABASE_URL.replace("postgresql+psycopg2://", "postgresql+asyncpg://")
+    # PostgreSQL configuration for production
+    engine = create_async_engine(
+        async_database_url,
+        pool_pre_ping=True,
+        pool_size=10,
+        max_overflow=20,
+        echo=settings.DEBUG
+    )
 else:
-    # PostgreSQL or other databases for production
-    engine = create_engine(
-        settings.DATABASE_URL,
+    # Fallback - assume it's already async compatible
+    engine = create_async_engine(
+        async_database_url,
         pool_pre_ping=True,
         pool_size=10,
         max_overflow=20,
         echo=settings.DEBUG
     )
 
-# Session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Async session factory
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
+)
 
 
-def get_db() -> Generator[Session, None, None]:
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    Dependency to get database session.
+    Async dependency to get database session.
 
     Usage:
         @app.get("/items")
-        def get_items(db: Session = Depends(get_db)):
+        async def get_items(db: AsyncSession = Depends(get_db)):
+            result = await db.execute(select(Item))
+            items = result.scalars().all()
             ...
     """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
 
 
-def init_db():
+async def init_db():
     """
-    Initialize database tables.
+    Initialize database tables asynchronously.
     Call this at application startup.
     """
     from app.models.user import Base as UserBase
     from app.models.ticket import Base as TicketBase
 
-    # Create all tables
-    UserBase.metadata.create_all(bind=engine)
-    TicketBase.metadata.create_all(bind=engine)
+    # Create all tables asynchronously
+    async with engine.begin() as conn:
+        await conn.run_sync(UserBase.metadata.create_all)
+        await conn.run_sync(TicketBase.metadata.create_all)
 
 
-def close_db():
+async def close_db():
     """
-    Close database connections.
+    Close database connections asynchronously.
     Call this at application shutdown.
     """
-    engine.dispose()
+    await engine.dispose()

@@ -1,12 +1,12 @@
 # backend/app/repositories/ticket_repository.py
 """
-Repository for SAV Ticket CRUD operations with database persistence
+Repository for SAV Ticket CRUD operations with async database persistence
 """
 import logging
 from typing import List, Optional, Dict
 from datetime import datetime
-from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, desc
 
 from app.models.ticket import TicketDB
 from app.services.sav_workflow_engine import SAVTicket
@@ -88,100 +88,104 @@ class TicketRepository:
         }
 
     @staticmethod
-    def create(db: Session, ticket: SAVTicket) -> TicketDB:
+    async def create(db: AsyncSession, ticket: SAVTicket) -> TicketDB:
         """Create a new ticket in database"""
         try:
             ticket_data = TicketRepository._ticket_to_db(ticket)
             db_ticket = TicketDB(**ticket_data)
             db.add(db_ticket)
-            db.commit()
-            db.refresh(db_ticket)
+            await db.commit()
+            await db.refresh(db_ticket)
             logger.info(f"Ticket {ticket.ticket_id} saved to database")
             return db_ticket
         except Exception as e:
             logger.error(f"Error saving ticket {ticket.ticket_id}: {e}")
-            db.rollback()
+            await db.rollback()
             raise
 
     @staticmethod
-    def get_by_id(db: Session, ticket_id: str) -> Optional[TicketDB]:
+    async def get_by_id(db: AsyncSession, ticket_id: str) -> Optional[TicketDB]:
         """Get ticket by ID"""
-        return db.query(TicketDB).filter(TicketDB.ticket_id == ticket_id).first()
+        result = await db.execute(select(TicketDB).where(TicketDB.ticket_id == ticket_id))
+        return result.scalar_one_or_none()
 
     @staticmethod
-    def get_all(db: Session, limit: int = 100, offset: int = 0) -> List[TicketDB]:
+    async def get_all(db: AsyncSession, limit: int = 100, offset: int = 0) -> List[TicketDB]:
         """Get all tickets with pagination"""
-        return (
-            db.query(TicketDB)
+        result = await db.execute(
+            select(TicketDB)
             .order_by(desc(TicketDB.created_at))
             .limit(limit)
             .offset(offset)
-            .all()
         )
+        return list(result.scalars().all())
 
     @staticmethod
-    def get_by_customer(db: Session, customer_id: str) -> List[TicketDB]:
+    async def get_by_customer(db: AsyncSession, customer_id: str) -> List[TicketDB]:
         """Get tickets for a specific customer"""
-        return (
-            db.query(TicketDB)
-            .filter(TicketDB.customer_id == customer_id)
+        result = await db.execute(
+            select(TicketDB)
+            .where(TicketDB.customer_id == customer_id)
             .order_by(desc(TicketDB.created_at))
-            .all()
         )
+        return list(result.scalars().all())
 
     @staticmethod
-    def get_by_status(db: Session, status: str) -> List[TicketDB]:
+    async def get_by_status(db: AsyncSession, status: str) -> List[TicketDB]:
         """Get tickets by status"""
-        return (
-            db.query(TicketDB)
-            .filter(TicketDB.status == status)
+        result = await db.execute(
+            select(TicketDB)
+            .where(TicketDB.status == status)
             .order_by(desc(TicketDB.created_at))
-            .all()
         )
+        return list(result.scalars().all())
 
     @staticmethod
-    def update(db: Session, ticket: SAVTicket) -> TicketDB:
+    async def update(db: AsyncSession, ticket: SAVTicket) -> TicketDB:
         """Update existing ticket"""
         try:
-            db_ticket = db.query(TicketDB).filter(TicketDB.ticket_id == ticket.ticket_id).first()
+            result = await db.execute(select(TicketDB).where(TicketDB.ticket_id == ticket.ticket_id))
+            db_ticket = result.scalar_one_or_none()
             if not db_ticket:
                 logger.warning(f"Ticket {ticket.ticket_id} not found, creating new")
-                return TicketRepository.create(db, ticket)
+                return await TicketRepository.create(db, ticket)
 
             ticket_data = TicketRepository._ticket_to_db(ticket)
             for key, value in ticket_data.items():
                 setattr(db_ticket, key, value)
 
             db_ticket.updated_at = datetime.now()
-            db.commit()
-            db.refresh(db_ticket)
+            await db.commit()
+            await db.refresh(db_ticket)
             logger.info(f"Ticket {ticket.ticket_id} updated in database")
             return db_ticket
         except Exception as e:
             logger.error(f"Error updating ticket {ticket.ticket_id}: {e}")
-            db.rollback()
+            await db.rollback()
             raise
 
     @staticmethod
-    def delete(db: Session, ticket_id: str) -> bool:
+    async def delete(db: AsyncSession, ticket_id: str) -> bool:
         """Delete ticket"""
         try:
-            db_ticket = db.query(TicketDB).filter(TicketDB.ticket_id == ticket_id).first()
+            result = await db.execute(select(TicketDB).where(TicketDB.ticket_id == ticket_id))
+            db_ticket = result.scalar_one_or_none()
             if db_ticket:
-                db.delete(db_ticket)
-                db.commit()
+                await db.delete(db_ticket)
+                await db.commit()
                 logger.info(f"Ticket {ticket_id} deleted from database")
                 return True
             return False
         except Exception as e:
             logger.error(f"Error deleting ticket {ticket_id}: {e}")
-            db.rollback()
+            await db.rollback()
             raise
 
     @staticmethod
-    def count(db: Session) -> int:
+    async def count(db: AsyncSession) -> int:
         """Count total tickets"""
-        return db.query(TicketDB).count()
+        result = await db.execute(select(TicketDB))
+        return len(result.scalars().all())
 
 
 # Singleton instance

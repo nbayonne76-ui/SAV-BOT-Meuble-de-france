@@ -17,7 +17,7 @@ from app.core.rate_limit import limiter, RateLimits
 from app.api.deps import get_current_user, OptionalAuth
 from app.models.user import UserDB
 from app.db.session import get_db
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # .env is loaded centrally in `app.core.config`; avoid reloading it here
 
@@ -153,7 +153,7 @@ async def chat(
     request: Request,
     chat_request: ChatRequest,
     current_user: Optional[UserDB] = Depends(OptionalAuth()),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Send a message to the chatbot.
@@ -290,7 +290,7 @@ async def validate_ticket(
     request: Request,
     ticket_id: str,
     current_user: Optional[UserDB] = Depends(OptionalAuth()),
-    db: Session = Depends(get_db)
+    db: AsyncSession = Depends(get_db)
 ):
     """
     Validate a ticket and persist it to the database.
