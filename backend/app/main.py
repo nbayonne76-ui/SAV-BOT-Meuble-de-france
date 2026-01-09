@@ -167,17 +167,164 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 60)
 
 
-# Create FastAPI app with conditional docs
+# API Metadata for enhanced documentation
+api_description = """
+## 🛋️ Meuble de France - Chatbot Intelligent
+
+API complète pour le chatbot de service client et SAV de Meuble de France.
+
+### 🎯 Fonctionnalités Principales
+
+* **💬 Chat Multilingue** - Support français, anglais et arabe
+* **🎤 Interactions Vocales** - Transcription et synthèse vocale avec OpenAI Whisper et TTS
+* **📸 Support Multimédia** - Upload et analyse d'images/vidéos
+* **🎫 Gestion des Tickets** - Création et suivi automatisé des tickets SAV
+* **🔍 Recherche Produits** - Recherche intelligente dans le catalogue
+* **❓ FAQ Dynamique** - Base de connaissances enrichie
+* **🔐 Authentification** - JWT avec refresh tokens et API keys
+* **📊 Analytics** - Suivi des interactions et métriques
+
+### 🔒 Sécurité
+
+Cette API implémente de nombreuses mesures de sécurité:
+
+* Rate limiting avec Redis
+* Protection DoS (request size limits & timeouts)
+* Circuit breakers pour les services externes
+* Validation complète des entrées
+* Headers de sécurité (CSP, HSTS, etc.)
+* Chiffrement des tokens JWT
+* Monitoring de performance et mémoire
+
+### 📚 Documentation
+
+* **Swagger UI**: `/docs` (mode développement)
+* **ReDoc**: `/redoc` (mode développement)
+* **OpenAPI Schema**: `/openapi.json` (mode développement)
+
+### 🏥 Monitoring
+
+* **Health Check**: `GET /health` - Statut basique de l'application
+* **Readiness Check**: `GET /ready` - Vérification complète des dépendances
+* **Query Stats**: `GET /query-stats` - Performance des requêtes SQL
+* **Memory Status**: `GET /memory` - Utilisation mémoire et alertes
+* **Circuit Breakers**: `GET /circuit-breakers` - État des services externes
+* **Environment**: `GET /env-status` - Validation de la configuration
+
+### 🔑 Authentification
+
+Deux méthodes d'authentification disponibles:
+
+1. **JWT Tokens** (utilisateurs)
+   - Login via `/api/auth/login`
+   - Refresh via `/api/auth/refresh`
+   - Bearer token dans header `Authorization`
+
+2. **API Keys** (applications)
+   - Création via `/api/auth/api-keys`
+   - Key dans header `X-API-Key`
+
+### 📞 Support
+
+Pour toute question technique, contactez l'équipe de développement.
+
+---
+
+*Généré avec FastAPI et Claude Code*
+"""
+
+api_tags_metadata = [
+    {
+        "name": "Health",
+        "description": "Endpoints de monitoring et vérification de l'état de l'application. "
+                      "Utilisez `/health` pour les load balancers et `/ready` pour les vérifications complètes.",
+    },
+    {
+        "name": "Authentication",
+        "description": "Gestion de l'authentification utilisateur et des API keys. "
+                      "Supporte JWT avec refresh tokens et authentification par API key.",
+    },
+    {
+        "name": "Chat",
+        "description": "Interface de chat intelligent multilingue. "
+                      "Support du contexte conversationnel, détection de langue, et réponses personnalisées.",
+    },
+    {
+        "name": "Upload",
+        "description": "Upload et gestion de fichiers multimédias (images, vidéos, audio). "
+                      "Support de Cloudinary pour le stockage en production.",
+    },
+    {
+        "name": "Products",
+        "description": "Recherche et consultation du catalogue de produits. "
+                      "Filtrage par catégories, prix, disponibilité.",
+    },
+    {
+        "name": "Tickets",
+        "description": "Gestion complète des tickets SAV. "
+                      "Création, suivi, mise à jour, et résolution automatique.",
+    },
+    {
+        "name": "FAQ",
+        "description": "Base de connaissances et questions fréquentes. "
+                      "Recherche sémantique et catégorisation.",
+    },
+    {
+        "name": "SAV",
+        "description": "Services après-vente: garanties, interventions, tickets. "
+                      "Vérification de garantie et gestion des demandes.",
+    },
+    {
+        "name": "Voice",
+        "description": "Services vocaux: transcription (Whisper) et synthèse (TTS). "
+                      "Support multilingue avec détection automatique.",
+    },
+    {
+        "name": "Realtime",
+        "description": "API temps réel pour conversations vocales et streaming. "
+                      "WebSocket et HTTP streaming disponibles.",
+    },
+]
+
+# Create FastAPI app with enhanced documentation
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Chatbot intelligent pour Meuble de France - Service client et SAV",
-    # Disable docs in production
+    description=api_description,
+    summary="API de chatbot intelligent pour service client et SAV",
+    # Contact and license information
+    contact={
+        "name": "Meuble de France - Équipe Technique",
+        "url": "https://meuble-de-france.com",
+        "email": "support@meuble-de-france.com",
+    },
+    license_info={
+        "name": "Propriétaire",
+        "url": "https://meuble-de-france.com/licence",
+    },
+    # Tags metadata for better organization
+    openapi_tags=api_tags_metadata,
+    # Disable docs in production for security
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     openapi_url="/openapi.json" if settings.DEBUG else None,
+    # Servers configuration
+    servers=[
+        {
+            "url": "http://localhost:8000",
+            "description": "Serveur de développement local"
+        },
+        {
+            "url": "https://api.meuble-de-france.com",
+            "description": "Serveur de production"
+        }
+    ] if settings.DEBUG else [],
+    # Application lifecycle
     lifespan=lifespan,
-    redirect_slashes=False  # Disable automatic trailing slash redirects to fix 307 on uploads
+    # Disable automatic trailing slash redirects
+    redirect_slashes=False,
+    # Terms of service
+    terms_of_service="https://meuble-de-france.com/terms",
 )
 
 # Setup rate limiter
