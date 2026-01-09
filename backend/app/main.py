@@ -9,6 +9,8 @@ from fastapi.responses import JSONResponse
 import uvicorn
 import logging
 import time
+import asyncio
+import signal
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -31,70 +33,119 @@ logger = setup_logging()
 async def lifespan(app: FastAPI):
     """
     Application lifespan handler for startup and shutdown events.
+    Handles graceful initialization and shutdown of all resources.
     """
     # Startup
+    startup_time = time.time()
+    logger.info("=" * 60)
     logger.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
     logger.info(f"Debug mode: {settings.DEBUG}")
+    logger.info(f"Environment: {'DEVELOPMENT' if settings.DEBUG else 'PRODUCTION'}")
+    logger.info("=" * 60)
+
+    # Track initialization failures
+    init_failures = []
 
     # Initialize database tables
     try:
         await init_db()
-        logger.info("Database initialized successfully")
+        logger.info("✅ Database initialized successfully")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
+        logger.error(f"❌ Database initialization failed: {e}")
+        init_failures.append(("database", str(e)))
 
     # Initialize cache (Redis or in-memory)
     try:
         CacheManager.initialize(settings.REDIS_URL)
-        logger.info(f"Cache initialized: {'Redis' if not settings.REDIS_URL.startswith('memory') else 'In-memory'}")
+        cache_type = 'Redis' if not settings.REDIS_URL.startswith('memory') else 'In-memory'
+        logger.info(f"✅ Cache initialized: {cache_type}")
     except Exception as e:
-        logger.error(f"Cache initialization failed: {e}")
+        logger.error(f"❌ Cache initialization failed: {e}")
+        init_failures.append(("cache", str(e)))
 
     # Initialize storage
     try:
         StorageManager.initialize("local", base_path=settings.UPLOAD_DIR)
-        logger.info("Storage initialized successfully")
+        logger.info("✅ Storage initialized successfully")
     except Exception as e:
-        logger.error(f"Storage initialization failed: {e}")
+        logger.error(f"❌ Storage initialization failed: {e}")
+        init_failures.append(("storage", str(e)))
 
     # Initialize Cloudinary if configured
     try:
         CloudinaryService.initialize()
         if settings.USE_CLOUDINARY:
-            logger.info(f"Cloudinary initialized: {settings.CLOUDINARY_CLOUD_NAME}")
+            logger.info(f"✅ Cloudinary initialized: {settings.CLOUDINARY_CLOUD_NAME}")
         else:
-            logger.info("Cloudinary not configured - using local storage")
+            logger.info("ℹ️  Cloudinary not configured - using local storage")
     except Exception as e:
-        logger.error(f"Cloudinary initialization failed: {e}")
+        logger.error(f"⚠️  Cloudinary initialization failed: {e}")
+        # Cloudinary is optional, so don't add to critical failures
 
     # Create necessary directories
-    Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-    Path(settings.UPLOAD_DIR, "photos").mkdir(parents=True, exist_ok=True)
-    Path(settings.UPLOAD_DIR, "videos").mkdir(parents=True, exist_ok=True)
+    try:
+        Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
+        Path(settings.UPLOAD_DIR, "photos").mkdir(parents=True, exist_ok=True)
+        Path(settings.UPLOAD_DIR, "videos").mkdir(parents=True, exist_ok=True)
+        logger.info("✅ Upload directories created")
+    except Exception as e:
+        logger.error(f"❌ Failed to create upload directories: {e}")
+        init_failures.append(("directories", str(e)))
+
+    # Report initialization status
+    startup_duration = round((time.time() - startup_time) * 1000, 2)
+    logger.info("=" * 60)
+    if init_failures:
+        logger.warning(f"⚠️  Application started with {len(init_failures)} initialization failures")
+        for component, error in init_failures:
+            logger.warning(f"   - {component}: {error}")
+    else:
+        logger.info("✅ All components initialized successfully")
+
+    logger.info(f"🚀 Application ready in {startup_duration}ms")
 
     if not settings.DEBUG:
-        logger.info("Running in PRODUCTION mode - security features enabled")
+        logger.info("🔒 Running in PRODUCTION mode - security features enabled")
     else:
-        logger.info(f"API Documentation: http://{settings.HOST}:{settings.PORT}/docs")
+        logger.info(f"📖 API Documentation: http://{settings.HOST}:{settings.PORT}/docs")
 
+    logger.info("=" * 60)
+
+    # Application is running
     yield
 
-    # Shutdown
-    logger.info("Shutting down application")
+    # Graceful shutdown
+    shutdown_time = time.time()
+    logger.info("=" * 60)
+    logger.info("🛑 Initiating graceful shutdown...")
+    logger.info("=" * 60)
+
+    # Give in-flight requests time to complete
+    logger.info("⏳ Waiting for in-flight requests to complete (max 30s)...")
+    await asyncio.sleep(0.5)  # Brief pause to allow current requests to finish
 
     # Close cache connection
     try:
+        logger.info("📦 Closing cache connection...")
         await CacheManager.close()
-        logger.info("Cache connection closed")
+        logger.info("✅ Cache connection closed")
     except Exception as e:
-        logger.error(f"Error closing cache: {e}")
+        logger.error(f"❌ Error closing cache: {e}")
 
     # Close database connections
     try:
+        logger.info("🗄️  Closing database connections...")
         await close_db()
-        logger.info("Database connections closed")
+        logger.info("✅ Database connections closed")
     except Exception as e:
-        logger.error(f"Error closing database: {e}")
+        logger.error(f"❌ Error closing database: {e}")
+
+    # Final cleanup
+    shutdown_duration = round((time.time() - shutdown_time) * 1000, 2)
+    logger.info("=" * 60)
+    logger.info(f"✅ Graceful shutdown completed in {shutdown_duration}ms")
+    logger.info(f"👋 {settings.APP_NAME} stopped")
+    logger.info("=" * 60)
 
 
 # Create FastAPI app with conditional docs
@@ -403,15 +454,46 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 def main():
-    """Main function to run the application"""
-    uvicorn.run(
+    """
+    Main function to run the application with graceful shutdown handling.
+    Configures signal handlers and uvicorn settings for production use.
+    """
+    # Signal handler for graceful shutdown
+    def signal_handler(signum, frame):
+        """Handle shutdown signals (SIGTERM, SIGINT)"""
+        signal_name = "SIGTERM" if signum == signal.SIGTERM else "SIGINT"
+        logger.info(f"Received {signal_name} signal, initiating graceful shutdown...")
+
+    # Register signal handlers (not on Windows in development due to reload)
+    if not settings.DEBUG:
+        signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+
+    # Configure uvicorn with graceful shutdown settings
+    config = uvicorn.Config(
         "app.main:app",
         host=settings.HOST,
         port=settings.PORT,
         reload=settings.DEBUG,
         log_level="info" if settings.DEBUG else "warning",
-        access_log=settings.DEBUG
+        access_log=settings.DEBUG,
+        # Graceful shutdown settings
+        timeout_keep_alive=5,  # Keep-alive timeout
+        timeout_graceful_shutdown=30,  # Max time to wait for shutdown
     )
+
+    server = uvicorn.Server(config)
+
+    try:
+        logger.info(f"Starting server on {settings.HOST}:{settings.PORT}")
+        server.run()
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down...")
+    except Exception as e:
+        logger.error(f"Server error: {e}")
+        raise
+    finally:
+        logger.info("Server stopped")
 
 
 if __name__ == "__main__":
