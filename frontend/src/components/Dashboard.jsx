@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { FileText, Download, XCircle, Filter, RefreshCw } from "lucide-react";
 import { API_URL } from "../utils/url";
 import TicketRow from "./TicketRow";
+import { useLanguage } from "../context/LanguageContext";
 
 const Dashboard = () => {
   const [tickets, setTickets] = useState([]);
@@ -11,7 +12,7 @@ const Dashboard = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [dossier, setDossier] = useState(null);
-
+  const { language, setLanguage, t, languages } = useLanguage();
   useEffect(() => {
     fetchTickets();
   }, []);
