@@ -4,6 +4,7 @@ Main FastAPI application with security features enabled
 """
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import uvicorn
@@ -170,6 +171,11 @@ setup_request_limits(app)
 
 # Setup security middleware
 setup_security_middleware(app)
+
+# Setup response compression (GZip)
+# Compress responses > 500 bytes to reduce bandwidth
+app.add_middleware(GZipMiddleware, minimum_size=500)
+logger.info("Response compression enabled (GZip, min size: 500 bytes)")
 
 # CORS Configuration - more restrictive in production
 if settings.DEBUG:
