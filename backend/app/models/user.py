@@ -128,19 +128,23 @@ Base = declarative_base()
 class UserDB(Base):
     """SQLAlchemy User model for database"""
     __tablename__ = "users"
+    __table_args__ = (
+        # Composite indexes for common query patterns
+        {'comment': 'User accounts with authentication and authorization'},
+    )
 
     id = Column(String(36), primary_key=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     username = Column(String(50), unique=True, index=True, nullable=False)
     full_name = Column(String(100), nullable=True)
     hashed_password = Column(String(255), nullable=False)
-    role = Column(SQLEnum(UserRole), default=UserRole.CUSTOMER, nullable=False)
-    status = Column(SQLEnum(UserStatus), default=UserStatus.ACTIVE, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    role = Column(SQLEnum(UserRole), default=UserRole.CUSTOMER, nullable=False, index=True)  # Index for role-based queries
+    status = Column(SQLEnum(UserStatus), default=UserStatus.ACTIVE, nullable=False, index=True)  # Index for status filtering
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)  # Index for sorting
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     last_login = Column(DateTime, nullable=True)
     failed_login_attempts = Column(Integer, default=0)
-    locked_until = Column(DateTime, nullable=True)
+    locked_until = Column(DateTime, nullable=True, index=True)  # Index for checking locked accounts
     api_key_hash = Column(String(255), nullable=True)
 
     def to_response(self) -> UserResponse:
@@ -178,12 +182,16 @@ class APIKeyResponse(BaseModel):
 class APIKeyDB(Base):
     """SQLAlchemy API Key model"""
     __tablename__ = "api_keys"
+    __table_args__ = (
+        # Composite index for finding active keys for a user
+        {'comment': 'API keys for programmatic access'},
+    )
 
     id = Column(String(36), primary_key=True)
     name = Column(String(100), nullable=False)
-    key_hash = Column(String(255), nullable=False)
-    user_id = Column(String(36), nullable=False, index=True)
+    key_hash = Column(String(255), nullable=False, index=True)  # Index for key lookup
+    user_id = Column(String(36), nullable=False, index=True)  # Index for user's keys
     scopes = Column(String(500), default="")  # Comma-separated scopes
     created_at = Column(DateTime, default=datetime.utcnow)
     last_used = Column(DateTime, nullable=True)
-    is_active = Column(Integer, default=1)  # 1=active, 0=revoked
+    is_active = Column(Integer, default=1, index=True)  # Index for filtering active keys
