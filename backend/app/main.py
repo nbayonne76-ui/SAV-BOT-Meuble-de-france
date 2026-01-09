@@ -5,7 +5,6 @@ Main FastAPI application with security features enabled
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 import uvicorn
 import logging
@@ -26,6 +25,7 @@ from app.core.circuit_breaker import get_circuit_stats
 from app.core.slow_query_logger import get_query_stats
 from app.core.memory_monitor import get_memory_status, get_memory_usage, trigger_garbage_collection
 from app.core.env_validator import validate_environment
+from app.core.secure_static_files import create_secure_static_files
 from app.db.session import init_db, close_db
 from app.api.endpoints import chat, upload, products, tickets, faq, sav, auth, voice, realtime, realtime_ws
 from app.services.storage import StorageManager
@@ -220,10 +220,19 @@ app.add_middleware(
     max_age=600  # Cache preflight for 10 minutes
 )
 
-# Mount uploads directory
+# Mount uploads directory with security headers
 uploads_path = Path(settings.UPLOAD_DIR)
 if uploads_path.exists():
-    app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
+    app.mount(
+        "/uploads",
+        create_secure_static_files(
+            directory=str(uploads_path),
+            cache_max_age=86400,  # 24 hours for uploaded media files
+            add_csp=True
+        ),
+        name="uploads"
+    )
+    logger.info(f"✅ Uploads directory mounted with security headers at /uploads")
 
 # Include routers
 # Authentication (public endpoints)
