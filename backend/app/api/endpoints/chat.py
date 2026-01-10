@@ -310,15 +310,51 @@ async def validate_ticket(
     This is called when the user clicks "Valider" on the recap.
     """
     try:
-        # Import here to avoid circular imports
-        from app.services.sav_workflow_engine import sav_workflow_engine
+        # 🎯 Gérer les tickets temporaires (PENDING-*) et les tickets réels (SAV-*)
+        if ticket_id.startswith("PENDING-"):
+            # Ticket en attente de validation → Créer le vrai ticket
+            # Extraire order_number du ticket_id temporaire
+            order_number = ticket_id.replace("PENDING-", "")
 
-        # Validate ticket ID format
-        if not re.match(r'^SAV-\d{8}-\d+$', ticket_id):
+            # Récupérer le chatbot instance pour cette session
+            # On doit trouver la session qui contient ce ticket en attente
+            from app.api.endpoints.chat import chatbot_instances
+
+            chatbot = None
+            for session_id, data in chatbot_instances.items():
+                bot = data["chatbot"]
+                if (bot.pending_ticket_validation and
+                    bot.pending_ticket_validation.get("order_number") == order_number):
+                    chatbot = bot
+                    break
+
+            if not chatbot or not chatbot.pending_ticket_validation:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Pending ticket not found or expired"
+                )
+
+            # Créer le vrai ticket
+            ticket_data = await chatbot.create_ticket_after_validation(db_session=db)
+
+            logger.info(f"✅ Ticket {ticket_data['ticket_id']} validé et créé depuis PENDING-{order_number}")
+
+            return {
+                "success": True,
+                "message": "Ticket validé et créé dans le système",
+                "ticket_id": ticket_data["ticket_id"],
+                "response": "✅ Parfait ! Votre demande a été enregistrée.\n\nVotre ticket a été créé avec succès. Notre équipe va traiter votre demande dans les meilleurs délais.\n\nVous recevrez une confirmation par email avec le numéro de suivi.\n\nY a-t-il autre chose pour laquelle je peux vous aider ?"
+            }
+
+        # Validate ticket ID format for real tickets
+        elif not re.match(r'^SAV-\d{8}-\d+$', ticket_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid ticket ID format"
             )
+
+        # Import here to avoid circular imports
+        from app.services.sav_workflow_engine import sav_workflow_engine
 
         # Set database session for persistence
         sav_workflow_engine.db_session = db
@@ -363,15 +399,50 @@ async def cancel_ticket(
     This is called when the user clicks "Modifier" on the recap.
     """
     try:
-        # Import here to avoid circular imports
-        from app.services.sav_workflow_engine import sav_workflow_engine
+        # 🎯 Gérer les tickets temporaires (PENDING-*)
+        if ticket_id.startswith("PENDING-"):
+            # Ticket en attente → Réinitialiser la validation
+            order_number = ticket_id.replace("PENDING-", "")
 
-        # Validate ticket ID format
+            # Récupérer le chatbot instance
+            from app.api.endpoints.chat import chatbot_instances
+
+            chatbot = None
+            for data in chatbot_instances.values():
+                bot = data["chatbot"]
+                if (bot.pending_ticket_validation and
+                    bot.pending_ticket_validation.get("order_number") == order_number):
+                    chatbot = bot
+                    break
+
+            if not chatbot or not chatbot.pending_ticket_validation:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Pending ticket not found or expired"
+                )
+
+            # Réinitialiser l'état de validation
+            chatbot.pending_ticket_validation = None
+            chatbot.awaiting_confirmation = False
+            chatbot.ticket_data = {}
+
+            logger.info(f"❌ Ticket PENDING-{order_number} annulé par l'utilisateur")
+
+            return {
+                "success": True,
+                "message": "Ticket annulé",
+                "response": "D'accord, je recommence. Pouvez-vous me redonner les informations corrigées ?"
+            }
+
+        # Validate ticket ID format for real tickets
         if not re.match(r'^SAV-\d{8}-\d+$', ticket_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid ticket ID format"
             )
+
+        # Import here to avoid circular imports
+        from app.services.sav_workflow_engine import sav_workflow_engine
 
         # Cancel the ticket
         result = sav_workflow_engine.cancel_ticket(ticket_id)

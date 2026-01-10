@@ -539,7 +539,7 @@ Utilise ces infos pour réponse rapide et pertinente.
             elif self.awaiting_confirmation and self.pending_ticket_validation:
                 if self.is_user_confirming(user_message):
                     logger.info("✅ Client confirme le ticket → Création")
-                    sav_ticket_data = await self.create_ticket_after_validation()
+                    sav_ticket_data = await self.create_ticket_after_validation(db_session=db_session)
                     # Le GPT a déjà répondu, on n'a pas besoin de modifier sa réponse
                 elif self.is_user_rejecting(user_message):
                     logger.info("❌ Client rejette le ticket → Réinitialisation")
@@ -919,7 +919,26 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             self.awaiting_confirmation = True
 
-            logger.info(f"✅ Validation préparée: {priority_result.priority} | {problem_result.primary_category}")
+            # 🎯 Générer un ticket_id temporaire pour validation
+            temp_ticket_id = f"PENDING-{order_number}"
+
+            # 🎯 Remplir ticket_data pour afficher les boutons de validation dans le frontend
+            self.ticket_data = {
+                "ticket_id": temp_ticket_id,
+                "requires_validation": True,  # ✅ Important pour afficher les boutons
+                "order_number": order_number,
+                "product_name": product_name,
+                "problem_description": user_message,
+                "priority": {
+                    "code": priority_result.priority,
+                    "label": self._get_priority_label(priority_result.priority),
+                    "emoji": self._get_priority_emoji(priority_result.priority),
+                },
+                "warranty_covered": warranty_check.is_covered,
+                "language": "fr"
+            }
+
+            logger.info(f"✅ Validation préparée: {priority_result.priority} | {problem_result.primary_category} | Ticket temp: {temp_ticket_id}")
 
             return self.pending_ticket_validation
 
