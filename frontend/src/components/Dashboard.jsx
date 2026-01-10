@@ -95,13 +95,28 @@ const Dashboard = () => {
   }, []);
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
-      if (filterPriority !== "all" && ticket.priority !== filterPriority)
+    console.log(`[Dashboard] Filtering ${tickets.length} tickets`);
+    console.log(`[Dashboard] Current filters - Priority: ${filterPriority}, Status: ${filterStatus}`);
+
+    const filtered = tickets.filter((ticket) => {
+      console.log(`[Dashboard] Checking ticket:`, ticket);
+      console.log(`[Dashboard]   - ticket.priority: ${ticket.priority}`);
+      console.log(`[Dashboard]   - ticket.status: ${ticket.status}`);
+
+      if (filterPriority !== "all" && ticket.priority !== filterPriority) {
+        console.log(`[Dashboard]   - FILTERED OUT by priority`);
         return false;
-      if (filterStatus !== "all" && ticket.status !== filterStatus)
+      }
+      if (filterStatus !== "all" && ticket.status !== filterStatus) {
+        console.log(`[Dashboard]   - FILTERED OUT by status`);
         return false;
+      }
+      console.log(`[Dashboard]   - ✅ PASSED filters`);
       return true;
     });
+
+    console.log(`[Dashboard] Filtered result: ${filtered.length} tickets`);
+    return filtered;
   }, [tickets, filterPriority, filterStatus]);
 
   const stats = useMemo(() => {
