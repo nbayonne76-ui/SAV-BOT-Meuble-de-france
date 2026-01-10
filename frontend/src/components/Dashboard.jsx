@@ -169,7 +169,10 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
+      style={{ color: '#000000' }}
+    >
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
