@@ -316,14 +316,18 @@ const Dashboard = () => {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {filteredTickets.map((ticket) => {
-                  // Normalize null values to prevent rendering issues
+                  // Normalize ALL required fields to prevent rendering issues
                   const normalizedTicket = {
-                    ...ticket,
+                    ticket_id: ticket.ticket_id || "UNKNOWN",
+                    customer_name: ticket.customer_name || null,
+                    order_number: ticket.order_number || "N/A",
+                    product_name: ticket.product_name || "Produit inconnu",
+                    problem_description: ticket.problem_description || "Pas de description",
                     priority: ticket.priority || "UNKNOWN",
-                    status: ticket.status || "unknown",
                     tone: ticket.tone || null,
                     urgency: ticket.urgency || "low",
-                    problem_description: ticket.problem_description || "Pas de description",
+                    status: ticket.status || "unknown",
+                    created_at: ticket.created_at || new Date().toISOString(),
                   };
 
                   console.log(`[Dashboard] Rendering ticket ${ticket.ticket_id}:`);
