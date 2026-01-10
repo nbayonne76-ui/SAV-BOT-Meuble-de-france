@@ -1,8 +1,18 @@
+const getLocale = () => {
+  try {
+    if (typeof window === "undefined") return "fr-FR";
+    const lang = localStorage.getItem("selectedLanguage") || "fr";
+    return lang === "en" ? "en-US" : lang === "ar" ? "ar-SA" : "fr-FR";
+  } catch (e) {
+    return "fr-FR";
+  }
+};
+
 export const formatDate = (dateStr) => {
   try {
-    const lang = localStorage.getItem("selectedLanguage") || "fr";
-    const locale = lang === "en" ? "en-US" : lang === "ar" ? "ar-SA" : "fr-FR";
-    return new Date(dateStr).toLocaleString(locale, {
+    const locale = getLocale();
+    const date = dateStr instanceof Date ? dateStr : new Date(dateStr);
+    return date.toLocaleString(locale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -15,12 +25,16 @@ export const formatDate = (dateStr) => {
 };
 
 export const formatTime = (timestamp) => {
-  const lang = localStorage.getItem("selectedLanguage") || "fr";
-  const locale = lang === "en" ? "en-US" : lang === "ar" ? "ar-SA" : "fr-FR";
-  return timestamp.toLocaleTimeString(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  try {
+    const locale = getLocale();
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
+    return date.toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (e) {
+    return timestamp?.toString?.() || "";
+  }
 };
 
 export const getPriorityColor = (priority) => {
@@ -41,5 +55,6 @@ export const getStatusLabel = (status) => {
     evidence_collection: "Collecte preuves",
     pending: "En attente",
   };
+  if (!status) return "";
   return labels[status] || status;
 };

@@ -12,14 +12,14 @@ interface TicketRowProps {
     problem_description: string;
     priority: string;
     tone: string | null;
-    urgency: string;
-    status: string;
-    created_at: string;
+    urgency: string | null;
+    status: string | null;
+    created_at: string | null;
   };
   onViewDossier: (ticketId: string) => void;
 }
 
-const getStatusIcon = (status: String) => {
+const getStatusIcon = (status?: string) => {
   switch (status) {
     case "escalated_to_human":
       return <AlertCircle className="w-4 h-4 text-orange-600" />;
@@ -29,13 +29,15 @@ const getStatusIcon = (status: String) => {
       return <CheckCircle className="w-4 h-4 text-green-600" />;
     case "evidence_collection":
       return <FileText className="w-4 h-4 text-purple-600" />;
+    case "pending":
+      return <Clock className="w-4 h-4 text-gray-600" />;
     default:
       return <Clock className="w-4 h-4 text-gray-600" />;
   }
 };
 
 const TicketRow = memo(({ ticket, onViewDossier }: TicketRowProps) => {
-  const { t } = useLanguage();
+  const { t } = useLanguage() as { t: (key: string) => string };
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 text-sm font-medium text-gray-900">
@@ -84,9 +86,9 @@ const TicketRow = memo(({ ticket, onViewDossier }: TicketRowProps) => {
       </td>
       <td className="px-6 py-4">
         <div className="flex items-center space-x-2">
-          {getStatusIcon(ticket.status)}
+          {getStatusIcon(ticket.status ? ticket.status : "")}
           <span className="text-xs text-gray-600">
-            {getStatusLabel(ticket.status)}
+            {getStatusLabel(ticket.status ?? "")}
           </span>
         </div>
       </td>

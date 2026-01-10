@@ -4,12 +4,25 @@ import translations, { supportedLanguages } from "../i18n/translations";
 const LanguageContext = createContext(null);
 
 export const LanguageProvider = ({ children }) => {
-  const [language, setLanguage] = useState(
-    localStorage.getItem("selectedLanguage") || "fr"
-  );
+  const [language, setLanguage] = useState(() => {
+    try {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("selectedLanguage") || "fr";
+      }
+    } catch (e) {
+      // localStorage not available (SSR), default to 'fr'
+    }
+    return "fr";
+  });
 
   useEffect(() => {
-    localStorage.setItem("selectedLanguage", language);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("selectedLanguage", language);
+      }
+    } catch (e) {
+      // ignore (localStorage unavailable)
+    }
   }, [language]);
 
   const t = (key) => {

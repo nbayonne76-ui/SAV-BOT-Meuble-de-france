@@ -1,4 +1,5 @@
-import { useState, lazy, Suspense, useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useMemo } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { LayoutDashboard, MessageCircle, Phone } from "lucide-react";
 import branding from "./config/branding";
 import NavTab from "./components/NavTab";
@@ -16,13 +17,8 @@ const LoadingSpinner = () => (
 );
 
 function App() {
-  const [currentView, setCurrentView] = useState("chat");
-
-  const handleViewChange = useCallback((view) => {
-    setCurrentView(view);
-  }, []);
-
   const { t } = useLanguage();
+  const location = useLocation();
 
   const tabs = useMemo(
     () => [
@@ -32,6 +28,9 @@ function App() {
     ],
     [t]
   );
+
+  const normalized = location.pathname.replace(/\/$/, "") || "/";
+  const isActive = (id) => normalized === `/${id}`;
 
   const containerStyle = useMemo(
     () => ({
@@ -61,8 +60,8 @@ function App() {
                   key={tab.id}
                   icon={tab.icon}
                   label={tab.label}
-                  isActive={currentView === tab.id}
-                  onClick={() => handleViewChange(tab.id)}
+                  isActive={isActive(tab.id)}
+                  to={`/${tab.id}`}
                   colors={branding.colors}
                 />
               ))}
@@ -74,21 +73,34 @@ function App() {
 
       <div className="flex-1 overflow-hidden">
         <Suspense fallback={<LoadingSpinner />}>
-          {currentView === "chat" && (
-            <div className="h-full">
-              <ChatInterface />
-            </div>
-          )}
-          {currentView === "voice" && (
-            <div className="h-full">
-              <VoiceChatWhisper />
-            </div>
-          )}
-          {currentView === "dashboard" && (
-            <div className="h-full">
-              <Dashboard />
-            </div>
-          )}
+          <Routes>
+            <Route path="/" element={<Navigate to="/chat" replace />} />
+            <Route
+              path="/chat"
+              element={
+                <div className="h-full">
+                  <ChatInterface />
+                </div>
+              }
+            />
+            <Route
+              path="/voice"
+              element={
+                <div className="h-full">
+                  <VoiceChatWhisper />
+                </div>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <div className="h-full">
+                  <Dashboard />
+                </div>
+              }
+            />
+            <Route path="*" element={<Navigate to="/chat" replace />} />
+          </Routes>
         </Suspense>
       </div>
     </div>
