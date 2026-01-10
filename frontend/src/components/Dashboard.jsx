@@ -323,9 +323,11 @@ const Dashboard = () => {
                     status: ticket.status || "unknown",
                     tone: ticket.tone || null,
                     urgency: ticket.urgency || "low",
+                    problem_description: ticket.problem_description || "Pas de description",
                   };
 
-                  console.log(`[Dashboard] Rendering ticket ${ticket.ticket_id}:`, normalizedTicket);
+                  console.log(`[Dashboard] Rendering ticket ${ticket.ticket_id}:`);
+                  console.log(JSON.stringify(normalizedTicket, null, 2));
 
                   return (
                     <TicketRow
