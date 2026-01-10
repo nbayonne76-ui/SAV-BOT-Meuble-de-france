@@ -22,6 +22,8 @@ const Dashboard = () => {
       setLoading(true);
       setError(null);
 
+      console.log(`[Dashboard] Fetching tickets from: ${API_URL}/api/sav/tickets`);
+
       const response = await fetch(`${API_URL}/api/sav/tickets`, {
         method: "GET",
         headers: {
@@ -30,20 +32,28 @@ const Dashboard = () => {
         },
       });
 
+      console.log(`[Dashboard] Response status: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Dashboard] Error response:`, errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
+      console.log(`[Dashboard] Response data:`, data);
+      console.log(`[Dashboard] Number of tickets:`, data.tickets ? data.tickets.length : 0);
 
       if (data.success) {
         setTickets(data.tickets || []);
         setError(null);
+        console.log(`[Dashboard] ✅ Successfully loaded ${data.tickets?.length || 0} tickets`);
       } else {
+        console.error(`[Dashboard] ❌ API returned success=false`);
         setError("Erreur lors du chargement des tickets");
       }
     } catch (err) {
-      console.error("Error:", err);
+      console.error("[Dashboard] ❌ Fetch error:", err);
       setError(`Erreur de connexion: ${err.message}`);
     } finally {
       setLoading(false);
@@ -85,13 +95,28 @@ const Dashboard = () => {
   }, []);
 
   const filteredTickets = useMemo(() => {
-    return tickets.filter((ticket) => {
-      if (filterPriority !== "all" && ticket.priority !== filterPriority)
+    console.log(`[Dashboard] Filtering ${tickets.length} tickets`);
+    console.log(`[Dashboard] Current filters - Priority: ${filterPriority}, Status: ${filterStatus}`);
+
+    const filtered = tickets.filter((ticket) => {
+      console.log(`[Dashboard] Checking ticket:`, ticket);
+      console.log(`[Dashboard]   - ticket.priority: ${ticket.priority}`);
+      console.log(`[Dashboard]   - ticket.status: ${ticket.status}`);
+
+      if (filterPriority !== "all" && ticket.priority !== filterPriority) {
+        console.log(`[Dashboard]   - FILTERED OUT by priority`);
         return false;
-      if (filterStatus !== "all" && ticket.status !== filterStatus)
+      }
+      if (filterStatus !== "all" && ticket.status !== filterStatus) {
+        console.log(`[Dashboard]   - FILTERED OUT by status`);
         return false;
+      }
+      console.log(`[Dashboard]   - ✅ PASSED filters`);
       return true;
     });
+
+    console.log(`[Dashboard] Filtered result: ${filtered.length} tickets`);
+    return filtered;
   }, [tickets, filterPriority, filterStatus]);
 
   const stats = useMemo(() => {
@@ -144,7 +169,10 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div
+      className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100"
+      style={{ color: '#000000' }}
+    >
       <div className="bg-gradient-to-r from-red-600 to-orange-600 text-white p-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
@@ -290,13 +318,32 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredTickets.map((ticket) => (
-                  <TicketRow
-                    key={ticket.ticket_id}
-                    ticket={ticket}
-                    onViewDossier={fetchDossier}
-                  />
-                ))}
+                {filteredTickets.map((ticket) => {
+                  // Normalize ALL required fields to prevent rendering issues
+                  const normalizedTicket = {
+                    ticket_id: ticket.ticket_id || "UNKNOWN",
+                    customer_name: ticket.customer_name || null,
+                    order_number: ticket.order_number || "N/A",
+                    product_name: ticket.product_name || "Produit inconnu",
+                    problem_description: ticket.problem_description || "Pas de description",
+                    priority: ticket.priority || "UNKNOWN",
+                    tone: ticket.tone || null,
+                    urgency: ticket.urgency || "low",
+                    status: ticket.status || "unknown",
+                    created_at: ticket.created_at || new Date().toISOString(),
+                  };
+
+                  console.log(`[Dashboard] Rendering ticket ${ticket.ticket_id}:`);
+                  console.log(JSON.stringify(normalizedTicket, null, 2));
+
+                  return (
+                    <TicketRow
+                      key={ticket.ticket_id}
+                      ticket={normalizedTicket}
+                      onViewDossier={fetchDossier}
+                    />
+                  );
+                })}
               </tbody>
             </table>
           )}

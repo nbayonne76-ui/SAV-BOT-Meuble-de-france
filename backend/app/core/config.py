@@ -207,7 +207,7 @@ class Settings:
                 "http://127.0.0.1:5173,"
                 "http://127.0.0.1:5174,"
                 "http://127.0.0.1:5175,"
-                "https://proactive-nurturing-production.up.railway.app/,"
+                "https://proactive-nurturing-production.up.railway.app,"
                 "http://127.0.0.1:5176"
             )
         )
@@ -253,10 +253,10 @@ if settings.DEBUG:
     db_type = settings.DATABASE_URL.split('://')[0] if '://' in settings.DATABASE_URL else 'unknown'
     print(f"[CONFIG] Database type: {db_type}")
     # Never log the actual API key, just confirm it's loaded
-    print(f"[CONFIG] OpenAI API Key: {'✓ Loaded' if settings.OPENAI_API_KEY else '✗ Missing'}")
-    print(f"[CONFIG] HTTPS Enforcement: {'✓ Enabled' if settings.ENFORCE_HTTPS else '✗ Disabled'}")
-    print(f"[CONFIG] Redis: {'✓ Configured' if not settings.REDIS_URL.startswith('memory') else 'In-memory'}")
-    print(f"[CONFIG] Cloudinary: {'✓ Configured' if settings.USE_CLOUDINARY else 'Local storage'}")
+    print(f"[CONFIG] OpenAI API Key: {'[OK] Loaded' if settings.OPENAI_API_KEY else '[X] Missing'}")
+    print(f"[CONFIG] HTTPS Enforcement: {'[OK] Enabled' if settings.ENFORCE_HTTPS else '[X] Disabled'}")
+    print(f"[CONFIG] Redis: {'[OK] Configured' if not settings.REDIS_URL.startswith('memory') else 'In-memory'}")
+    print(f"[CONFIG] Cloudinary: {'[OK] Configured' if settings.USE_CLOUDINARY else 'Local storage'}")
 
 
 # Helper functions for backwards compatibility

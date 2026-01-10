@@ -29,6 +29,8 @@ const getStatusIcon = (status?: string) => {
       return <CheckCircle className="w-4 h-4 text-green-600" />;
     case "evidence_collection":
       return <FileText className="w-4 h-4 text-purple-600" />;
+    case "unknown":
+      return <AlertCircle className="w-4 h-4 text-gray-500" />;
     case "pending":
       return <Clock className="w-4 h-4 text-gray-600" />;
     default:
@@ -37,7 +39,7 @@ const getStatusIcon = (status?: string) => {
 };
 
 const TicketRow = memo(({ ticket, onViewDossier }: TicketRowProps) => {
-  const { t } = useLanguage() as { t: (key: string) => string };
+  const { t } = useLanguage();
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 text-sm font-medium text-gray-900">

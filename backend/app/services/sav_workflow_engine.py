@@ -166,18 +166,19 @@ class SAVWorkflowEngine:
             }
         }
 
-    def _persist_ticket(self, ticket: SAVTicket):
+    async def _persist_ticket(self, ticket: SAVTicket):
         """Persist ticket to database if db_session is available"""
         if self.db_session:
             try:
                 from app.repositories.ticket_repository import ticket_repository
-                existing = ticket_repository.get_by_id(self.db_session, ticket.ticket_id)
+                existing = await ticket_repository.get_by_id(self.db_session, ticket.ticket_id)
                 if existing:
-                    ticket_repository.update(self.db_session, ticket)
+                    await ticket_repository.update(self.db_session, ticket)
                 else:
-                    ticket_repository.create(self.db_session, ticket)
+                    await ticket_repository.create(self.db_session, ticket)
+                logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} sauvegardé dans la base de données")
             except Exception as e:
-                logger.error(f"Erreur persistence ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {e}")
+                logger.error(f"❌ Erreur persistence ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {e}")
                 # Ne pas lever l'exception pour ne pas bloquer le workflow
         else:
             logger.debug(f"Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} non persisté (pas de session DB)")
@@ -270,7 +271,7 @@ class SAVWorkflowEngine:
         # 🎯 NOUVEAU: Ne persister en base que si validation non requise
         # Si validation requise, attendre la confirmation de l'utilisateur
         if not (ticket.client_summary and ticket.client_summary.validation_required):
-            self._persist_ticket(ticket)
+            await self._persist_ticket(ticket)
             logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base (pas de validation requise)")
         else:
             logger.info(f"⏳ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} en attente de validation utilisateur (non persisté)")
@@ -847,7 +848,7 @@ class SAVWorkflowEngine:
         }
         return emojis.get(priority, "⚪")
 
-    def validate_ticket(self, ticket_id: str) -> Dict:
+    async def validate_ticket(self, ticket_id: str) -> Dict:
         """
         Valide un ticket et le persiste en base de données
 
@@ -878,7 +879,7 @@ class SAVWorkflowEngine:
         ))
 
         # Persister en base de données
-        self._persist_ticket(ticket)
+        await self._persist_ticket(ticket)
 
         logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} validé et persisté en base de données")
 
