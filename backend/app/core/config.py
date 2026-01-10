@@ -207,7 +207,7 @@ class Settings:
                 "http://127.0.0.1:5173,"
                 "http://127.0.0.1:5174,"
                 "http://127.0.0.1:5175,"
-                "https://proactive-nurturing-production.up.railway.app/,"
+                "https://proactive-nurturing-production.up.railway.app,"
                 "http://127.0.0.1:5176"
             )
         )
