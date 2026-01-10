@@ -29,6 +29,7 @@ export const getPriorityColor = (priority) => {
     P1: "bg-orange-100 text-orange-800 border-orange-300",
     P2: "bg-yellow-100 text-yellow-800 border-yellow-300",
     P3: "bg-green-100 text-green-800 border-green-300",
+    UNKNOWN: "bg-gray-100 text-gray-600 border-gray-400",
   };
   return colors[priority] || "bg-gray-100 text-gray-800 border-gray-300";
 };
@@ -40,6 +41,7 @@ export const getStatusLabel = (status) => {
     auto_resolved: "Résolu auto",
     evidence_collection: "Collecte preuves",
     pending: "En attente",
+    unknown: "Statut inconnu",
   };
   return labels[status] || status;
 };

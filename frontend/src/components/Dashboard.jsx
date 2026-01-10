@@ -315,13 +315,26 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredTickets.map((ticket) => (
-                  <TicketRow
-                    key={ticket.ticket_id}
-                    ticket={ticket}
-                    onViewDossier={fetchDossier}
-                  />
-                ))}
+                {filteredTickets.map((ticket) => {
+                  // Normalize null values to prevent rendering issues
+                  const normalizedTicket = {
+                    ...ticket,
+                    priority: ticket.priority || "UNKNOWN",
+                    status: ticket.status || "unknown",
+                    tone: ticket.tone || null,
+                    urgency: ticket.urgency || "low",
+                  };
+
+                  console.log(`[Dashboard] Rendering ticket ${ticket.ticket_id}:`, normalizedTicket);
+
+                  return (
+                    <TicketRow
+                      key={ticket.ticket_id}
+                      ticket={normalizedTicket}
+                      onViewDossier={fetchDossier}
+                    />
+                  );
+                })}
               </tbody>
             </table>
           )}
