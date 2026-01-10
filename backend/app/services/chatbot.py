@@ -955,6 +955,12 @@ Utilise ces infos pour réponse rapide et pertinente.
                 product_value=self.client_data.get("amount", 0.0)
             )
 
+            # 🎯 FORCER la persistence après validation client
+            # Le ticket a validation_required=True donc il n'a pas été persisté automatiquement
+            # Maintenant que le client a confirmé, on persiste manuellement
+            await workflow_engine._persist_ticket(ticket)
+            logger.info(f"✅ Ticket {ticket.ticket_id} persisté en base après validation client")
+
             # Générer message preuves
             evidence_message = evidence_collector.generate_evidence_request_message(
                 problem_category=ticket.problem_category,
