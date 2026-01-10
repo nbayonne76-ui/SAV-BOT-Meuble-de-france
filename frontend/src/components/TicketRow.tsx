@@ -39,7 +39,7 @@ const getStatusIcon = (status?: string) => {
 };
 
 const TicketRow = memo(({ ticket, onViewDossier }: TicketRowProps) => {
-  const { t } = useLanguage();
+  const { t } = useLanguage() as { t: (key: string) => string };
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 text-sm font-medium text-gray-900">
