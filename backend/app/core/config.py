@@ -79,6 +79,9 @@ class Settings:
                 database_url = "sqlite:///./chatbot.db"
                 print(f"[INFO] Using SQLite: {database_url}")
         else:
+            # CRITICAL: Strip whitespace and newlines that might be in the environment variable
+            database_url = database_url.strip()
+
             # Redact sensitive connection info from logs
             db_type = database_url.split('://')[0] if '://' in database_url else 'unknown'
             print(f"[DEBUG] DATABASE_URL found: {db_type}://***")
