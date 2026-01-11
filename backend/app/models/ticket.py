@@ -36,7 +36,7 @@ class TicketDB(Base):
 
     # Warranty info
     warranty_id = Column(String(100), index=True)  # For warranty lookup
-    warranty_status = Column(String(50))
+    warranty_status = Column(String(200))  # Increased from 50 to handle longer warranty messages
 
     # Priority
     priority = Column(String(20), index=True)  # For priority-based routing
