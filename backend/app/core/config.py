@@ -64,13 +64,24 @@ class Settings:
         # ===================
         database_url = os.getenv("DATABASE_URL")
 
-        # Check if DATABASE_URL is set
+        # ALTERNATIVE: Build from individual Postgres variables if DATABASE_URL not available
         if not database_url or database_url.strip() == "":
-            if not self.DEBUG:
-                # In production, DATABASE_URL is REQUIRED
+            # Try to build from Railway Postgres individual variables
+            pghost = os.getenv("PGHOST")
+            pgport = os.getenv("PGPORT", "5432")
+            pguser = os.getenv("PGUSER", "postgres")
+            pgpassword = os.getenv("PGPASSWORD")
+            pgdatabase = os.getenv("PGDATABASE", "railway")
+
+            if pghost and pgpassword:
+                # Build DATABASE_URL from individual components
+                database_url = f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
+                print(f"[INFO] Built DATABASE_URL from PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE")
+            elif not self.DEBUG:
+                # In production, database is REQUIRED
                 raise ValueError(
                     "DATABASE_URL environment variable is required in production! "
-                    "Please set a PostgreSQL connection string. "
+                    "Or set PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE. "
                     "Example: postgresql://user:password@host:port/database"
                 )
             else:
@@ -86,14 +97,14 @@ class Settings:
             db_type = database_url.split('://')[0] if '://' in database_url else 'unknown'
             print(f"[DEBUG] DATABASE_URL found: {db_type}://***")
 
-            # Transform PostgreSQL URLs for SQLAlchemy compatibility
-            # Railway/Heroku provide postgresql:// but SQLAlchemy needs postgresql+psycopg2://
-            if database_url.startswith("postgresql://"):
-                database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
-                print("[INFO] Transformed postgresql:// to postgresql+psycopg2://")
-            elif database_url.startswith("postgres://"):
-                database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
-                print("[INFO] Transformed postgres:// to postgresql+psycopg2://")
+        # Transform PostgreSQL URLs for SQLAlchemy compatibility
+        # Railway/Heroku provide postgresql:// but SQLAlchemy needs postgresql+psycopg2://
+        if database_url and database_url.startswith("postgresql://"):
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            print("[INFO] Transformed postgresql:// to postgresql+psycopg2://")
+        elif database_url and database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+            print("[INFO] Transformed postgres:// to postgresql+psycopg2://")
 
         self.DATABASE_URL = database_url
 
