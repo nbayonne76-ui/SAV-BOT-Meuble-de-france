@@ -166,7 +166,7 @@ class SAVWorkflowEngine:
             }
         }
 
-    async def _persist_ticket(self, ticket: SAVTicket):
+    async def _persist_ticket(self, ticket: SAVTicket, raise_on_error: bool = False):
         """Persist ticket to database if db_session is available"""
         if self.db_session:
             try:
@@ -179,7 +179,11 @@ class SAVWorkflowEngine:
                 logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} sauvegardé dans la base de données")
             except Exception as e:
                 logger.error(f"❌ Erreur persistence ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {e}")
-                # Ne pas lever l'exception pour ne pas bloquer le workflow
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                if raise_on_error:
+                    raise  # Lever l'exception pour validation par bouton
+                # Sinon ne pas lever l'exception pour ne pas bloquer le workflow automatique
         else:
             logger.debug(f"Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} non persisté (pas de session DB)")
 

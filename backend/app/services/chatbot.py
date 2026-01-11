@@ -518,6 +518,31 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             logger.info(f"Chat response generated (language: {language}, type: {self.conversation_type})")
 
+            # 🎯 DÉTECTER si la réponse contient le récapitulatif pour afficher les boutons
+            is_showing_recap = "📋 RÉCAPITULATIF" in assistant_message or "📋 RECAPITULATIF" in assistant_message
+
+            if is_showing_recap and self.awaiting_confirmation and self.pending_ticket_validation:
+                # Générer ticket_id temporaire et activer les boutons
+                order_number = self.pending_ticket_validation.get("order_number")
+                temp_ticket_id = f"PENDING-{order_number}"
+                priority_code = self.pending_ticket_validation.get("priority", "P3")
+
+                self.ticket_data = {
+                    "ticket_id": temp_ticket_id,
+                    "requires_validation": True,  # ✅ Activer boutons SEULEMENT au récapitulatif
+                    "order_number": order_number,
+                    "product_name": self.pending_ticket_validation.get("product_name", ""),
+                    "problem_description": self.pending_ticket_validation.get("problem_description", ""),
+                    "priority": {
+                        "code": priority_code,
+                        "label": self._get_priority_label(priority_code),
+                        "emoji": self._get_priority_emoji(priority_code),
+                    },
+                    "warranty_covered": self.pending_ticket_validation.get("warranty_covered", False),
+                    "language": language
+                }
+                logger.info(f"🎯 Récapitulatif détecté → Boutons activés pour {temp_ticket_id}")
+
             # 🎯 NOUVEAU: Workflow SAV avec validation client
             sav_ticket_data = None
             should_close_session = False  # Flag pour indiquer au frontend de fermer
@@ -919,26 +944,7 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             self.awaiting_confirmation = True
 
-            # 🎯 Générer un ticket_id temporaire pour validation
-            temp_ticket_id = f"PENDING-{order_number}"
-
-            # 🎯 Remplir ticket_data pour afficher les boutons de validation dans le frontend
-            self.ticket_data = {
-                "ticket_id": temp_ticket_id,
-                "requires_validation": True,  # ✅ Important pour afficher les boutons
-                "order_number": order_number,
-                "product_name": product_name,
-                "problem_description": user_message,
-                "priority": {
-                    "code": priority_result.priority,
-                    "label": self._get_priority_label(priority_result.priority),
-                    "emoji": self._get_priority_emoji(priority_result.priority),
-                },
-                "warranty_covered": warranty_check.is_covered,
-                "language": "fr"
-            }
-
-            logger.info(f"✅ Validation préparée: {priority_result.priority} | {problem_result.primary_category} | Ticket temp: {temp_ticket_id}")
+            logger.info(f"✅ Validation préparée: {priority_result.priority} | {problem_result.primary_category}")
 
             return self.pending_ticket_validation
 
@@ -979,7 +985,7 @@ Utilise ces infos pour réponse rapide et pertinente.
             # 🎯 FORCER la persistence après validation client
             # Le ticket a validation_required=True donc il n'a pas été persisté automatiquement
             # Maintenant que le client a confirmé, on persiste manuellement
-            await workflow_engine._persist_ticket(ticket)
+            await workflow_engine._persist_ticket(ticket, raise_on_error=True)
             logger.info(f"✅ Ticket {ticket.ticket_id} persisté en base après validation client")
 
             # Générer message preuves
