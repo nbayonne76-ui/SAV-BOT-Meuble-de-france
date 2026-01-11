@@ -7,23 +7,24 @@ sys.path.insert(0, 'backend')
 async def migrate_warranty_status():
     """Increase warranty_status column size to handle longer messages"""
     from app.db.session import engine
+    from sqlalchemy import text
 
     async with engine.begin() as conn:
         print("[INFO] Migrating warranty_status column...")
 
         # Alter column type
         await conn.execute(
-            """
+            text("""
             ALTER TABLE sav_tickets
             ALTER COLUMN warranty_status TYPE VARCHAR(200);
-            """
+            """)
         )
 
-        print("[SUCCESS] ✅ Column warranty_status migrated to VARCHAR(200)")
+        print("[SUCCESS] Column warranty_status migrated to VARCHAR(200)")
 
         # Verify
         result = await conn.execute(
-            """
+            text("""
             SELECT
                 column_name,
                 data_type,
@@ -31,10 +32,10 @@ async def migrate_warranty_status():
             FROM information_schema.columns
             WHERE table_name = 'sav_tickets'
               AND column_name = 'warranty_status';
-            """
+            """)
         )
 
-        row = result.fetchone()
+        row = result.first()
         if row:
             print(f"\n[VERIFICATION]")
             print(f"  Column: {row[0]}")
