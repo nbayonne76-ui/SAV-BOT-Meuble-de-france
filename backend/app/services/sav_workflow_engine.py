@@ -863,37 +863,93 @@ class SAVWorkflowEngine:
         Returns:
             Dict avec le statut de validation
         """
-        if ticket_id not in self.active_tickets:
-            logger.error(f"❌ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé pour validation")
-            return {"success": False, "error": f"Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé"}
+        # If the ticket is currently in memory (active tickets), update and persist
+        if ticket_id in self.active_tickets:
+            ticket = self.active_tickets[ticket_id]
 
-        ticket = self.active_tickets[ticket_id]
+            # Mettre à jour le statut de validation
+            ticket.validation_status = "validated"
+            ticket.updated_at = datetime.now()
 
-        # Mettre à jour le statut de validation
-        ticket.validation_status = "validated"
-        ticket.updated_at = datetime.now()
+            # Ajouter une action
+            ticket.actions.append(TicketAction(
+                action_id=f"{ticket.ticket_id}-ACT-{len(ticket.actions) + 1:03d}",
+                timestamp=datetime.now(),
+                actor="customer",
+                action_type="ticket_validated",
+                description="Ticket validé par le client",
+                metadata={"validation_time": datetime.now().isoformat()}
+            ))
 
-        # Ajouter une action
-        ticket.actions.append(TicketAction(
-            action_id=f"{ticket.ticket_id}-ACT-{len(ticket.actions) + 1:03d}",
-            timestamp=datetime.now(),
-            actor="customer",
-            action_type="ticket_validated",
-            description="Ticket validé par le client",
-            metadata={"validation_time": datetime.now().isoformat()}
-        ))
+            # Persister en base de données
+            await self._persist_ticket(ticket)
 
-        # Persister en base de données
-        await self._persist_ticket(ticket)
+            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} validé et persisté en base de données")
 
-        logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} validé et persisté en base de données")
+            return {
+                "success": True,
+                "ticket_id": ticket.ticket_id,
+                "status": ticket.status,
+                "validation_status": ticket.validation_status
+            }
 
-        return {
-            "success": True,
-            "ticket_id": ticket.ticket_id,
-            "status": ticket.status,
-            "validation_status": ticket.validation_status
-        }
+        # Fallback: try to validate ticket persisted in DB but not loaded in memory
+        logger.info(f"ℹ️ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non présent en mémoire - tentative fallback DB")
+
+        # Require a DB session to operate on persisted tickets
+        if not self.db_session:
+            logger.error(f"❌ Aucun accès DB pour valider le ticket {input_sanitizer.sanitize_for_logging(ticket_id)}")
+            return {"success": False, "error": "No DB session available to validate persisted ticket"}
+
+        try:
+            from app.repositories.ticket_repository import ticket_repository
+
+            db_ticket = await ticket_repository.get_by_id(self.db_session, ticket_id)
+            if not db_ticket:
+                logger.error(f"❌ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} non trouvé en base pour validation")
+                return {"success": False, "error": f"Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} not found in DB"}
+
+            # Ensure client_summary exists and mark validation as done
+            client_summary = db_ticket.client_summary or {}
+            client_summary["validation_required"] = False
+            client_summary["validation_status"] = "validated"
+            db_ticket.client_summary = client_summary
+
+            # Append an action to the actions list (JSON stored in DB)
+            actions = db_ticket.actions or []
+            actions.append({
+                "action_id": f"{db_ticket.ticket_id}-ACT-{len(actions) + 1:03d}",
+                "timestamp": datetime.now().isoformat(),
+                "actor": "customer",
+                "action_type": "ticket_validated",
+                "description": "Ticket validé par le client",
+                "metadata": {"validation_time": datetime.now().isoformat()}
+            })
+            db_ticket.actions = actions
+
+            # Update timestamp
+            db_ticket.updated_at = datetime.now()
+
+            # Commit the changes to DB
+            await self.db_session.commit()
+            try:
+                await self.db_session.refresh(db_ticket)
+            except Exception:
+                # refresh might not be supported by some test stubs - ignore
+                pass
+
+            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket_id)} validé et mis à jour en base de données (fallback)")
+
+            return {
+                "success": True,
+                "ticket_id": db_ticket.ticket_id,
+                "status": db_ticket.status,
+                "validation_status": client_summary.get("validation_status")
+            }
+
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la validation fallback DB pour {input_sanitizer.sanitize_for_logging(ticket_id)}: {e}")
+            return {"success": False, "error": str(e)}
 
     def cancel_ticket(self, ticket_id: str) -> Dict:
         """

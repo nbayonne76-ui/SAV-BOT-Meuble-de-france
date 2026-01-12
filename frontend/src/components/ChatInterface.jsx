@@ -318,11 +318,25 @@ const ChatInterface = () => {
         headers: { "Content-Type": "application/json" },
       });
 
+      // Attempt to parse body regardless of status for better error messages
+      const responseBody = await response.json().catch(() => null);
+
       if (!response.ok) {
-        throw new Error("Erreur validation");
+        console.error(
+          "Validation error response:",
+          response.status,
+          responseBody
+        );
+        const serverMsg =
+          responseBody?.detail ||
+          responseBody?.error ||
+          responseBody?.message ||
+          t("chat.error_ticket_validation");
+        alert(serverMsg);
+        return;
       }
 
-      const data = await response.json();
+      const data = responseBody;
 
       // Afficher le message de confirmation
       const confirmationMessage = {
