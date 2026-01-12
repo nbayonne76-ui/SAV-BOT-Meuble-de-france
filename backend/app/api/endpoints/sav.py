@@ -3,7 +3,7 @@
 Endpoints API pour le système SAV automatisé
 """
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Request
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
@@ -313,7 +313,7 @@ async def get_evidence_requirements(problem_category: str, priority: str = "P2")
 
 
 @router.get("/tickets")
-async def get_all_tickets(db: AsyncSession = Depends(get_db)):
+async def get_all_tickets(request: Request, db: AsyncSession = Depends(get_db)):
     """
     NOUVEAU: Récupère tous les tickets SAV pour le tableau de bord (depuis la base de données)
 
@@ -322,10 +322,19 @@ async def get_all_tickets(db: AsyncSession = Depends(get_db)):
     """
 
     try:
+        # If DB initialization failed at startup, return 503 with helpful message
+        if getattr(request.app.state, "db_available", False) is False:
+            logger.error("Database unavailable - cannot fetch tickets")
+            raise HTTPException(status_code=503, detail="Database temporarily unavailable. Please try again later.")
+
         logger.info("Récupération de tous les tickets SAV depuis la base de données")
 
         # Récupérer les tickets depuis la base de données
-        db_tickets = await ticket_repository.get_all(db, limit=100)
+        try:
+            db_tickets = await ticket_repository.get_all(db, limit=100)
+        except (ConnectionRefusedError, OSError) as conn_err:
+            logger.error(f"Database connection error when fetching tickets: {conn_err}")
+            raise HTTPException(status_code=503, detail="Database connection refused. Please check DB configuration and availability.")
 
         tickets_list = []
 
@@ -376,8 +385,13 @@ async def get_all_tickets(db: AsyncSession = Depends(get_db)):
             "tickets": tickets_list
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Erreur récupération tickets: {str(e)}")
+        logger.exception(f"Erreur récupération tickets: {e}")
+        # Return 503 for connectivity issues when the message indicates 'refused'
+        if "refused" in str(e).lower() or isinstance(e, (ConnectionRefusedError, OSError)):
+            raise HTTPException(status_code=503, detail="Database connection refused. Please check DB configuration and availability.")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
 

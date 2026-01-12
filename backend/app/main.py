@@ -66,10 +66,13 @@ async def lifespan(app: FastAPI):
     init_failures = []
 
     # Initialize database tables
+    app.state.db_available = False
     try:
         await init_db()
+        app.state.db_available = True
         logger.info("✅ Database initialized successfully")
     except Exception as e:
+        app.state.db_available = False
         logger.error(f"❌ Database initialization failed: {e}")
         init_failures.append(("database", str(e)))
 
@@ -749,8 +752,19 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 def main():
     """
-    Main function to run the application with graceful shutdown handling.
-    Configures signal handlers and uvicorn settings for production use.
+    Return the ASGI application.
+
+    This makes the callable suitable as a factory for uvicorn when invoked as
+    `uvicorn app.main:main` — uvicorn will call this function and receive the
+    FastAPI `app` instance instead of nesting server runs.
+    """
+    return app
+
+
+def run_server():
+    """
+    Run the application with graceful shutdown handling.
+    This contains the previous behavior of `main()` when executed directly.
     """
     # Signal handler for graceful shutdown
     def signal_handler(signum, frame):
@@ -791,4 +805,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    run_server()
