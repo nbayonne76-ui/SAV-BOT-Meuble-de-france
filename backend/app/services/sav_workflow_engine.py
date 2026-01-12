@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # backend/app/services/sav_workflow_engine.py
 """
 Moteur de workflow automatisé pour le traitement SAV

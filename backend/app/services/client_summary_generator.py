@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # backend/app/services/client_summary_generator.py
 """
 Générateur de récapitulatif client pour validation
