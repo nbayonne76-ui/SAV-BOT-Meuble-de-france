@@ -67,11 +67,12 @@ class Settings:
         # ALTERNATIVE: Build from individual Postgres variables if DATABASE_URL not available
         if not database_url or database_url.strip() == "":
             # Try to build from Railway Postgres individual variables
+            # Railway uses both PGHOST and POSTGRES_* format
             pghost = os.getenv("PGHOST")
-            pgport = os.getenv("PGPORT", "5432")
-            pguser = os.getenv("PGUSER", "postgres")
-            pgpassword = os.getenv("PGPASSWORD")
-            pgdatabase = os.getenv("PGDATABASE", "railway")
+            pgport = os.getenv("PGPORT") or os.getenv("POSTGRES_PORT", "5432")
+            pguser = os.getenv("PGUSER") or os.getenv("POSTGRES_USER", "postgres")
+            pgpassword = os.getenv("PGPASSWORD") or os.getenv("POSTGRES_PASSWORD")
+            pgdatabase = os.getenv("PGDATABASE") or os.getenv("POSTGRES_DB", "railway")
 
             if pghost and pgpassword:
                 # Build DATABASE_URL from individual components

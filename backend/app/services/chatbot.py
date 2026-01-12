@@ -518,31 +518,6 @@ Utilise ces infos pour réponse rapide et pertinente.
 
             logger.info(f"Chat response generated (language: {language}, type: {self.conversation_type})")
 
-            # 🎯 DÉTECTER si la réponse contient le récapitulatif pour afficher les boutons
-            is_showing_recap = "📋 RÉCAPITULATIF" in assistant_message or "📋 RECAPITULATIF" in assistant_message
-
-            if is_showing_recap and self.awaiting_confirmation and self.pending_ticket_validation:
-                # Générer ticket_id temporaire et activer les boutons
-                order_number = self.pending_ticket_validation.get("order_number")
-                temp_ticket_id = f"PENDING-{order_number}"
-                priority_code = self.pending_ticket_validation.get("priority", "P3")
-
-                self.ticket_data = {
-                    "ticket_id": temp_ticket_id,
-                    "requires_validation": True,  # ✅ Activer boutons SEULEMENT au récapitulatif
-                    "order_number": order_number,
-                    "product_name": self.pending_ticket_validation.get("product_name", ""),
-                    "problem_description": self.pending_ticket_validation.get("problem_description", ""),
-                    "priority": {
-                        "code": priority_code,
-                        "label": self._get_priority_label(priority_code),
-                        "emoji": self._get_priority_emoji(priority_code),
-                    },
-                    "warranty_covered": self.pending_ticket_validation.get("warranty_covered", False),
-                    "language": language
-                }
-                logger.info(f"🎯 Récapitulatif détecté → Boutons activés pour {temp_ticket_id}")
-
             # 🎯 NOUVEAU: Workflow SAV avec validation client
             sav_ticket_data = None
             should_close_session = False  # Flag pour indiquer au frontend de fermer
@@ -585,6 +560,26 @@ Utilise ces infos pour réponse rapide et pertinente.
                 )
                 # Pas de ticket créé, juste données pour validation
                 sav_ticket_data = {"validation_pending": True, "validation_data": validation_data}
+
+                # 🎯 GÉNERER ticket_data IMMÉDIATEMENT pour afficher les boutons
+                temp_ticket_id = f"PENDING-{order_number}"
+                priority_code = self.pending_ticket_validation.get("priority", "P3")
+
+                self.ticket_data = {
+                    "ticket_id": temp_ticket_id,
+                    "requires_validation": True,  # ✅ Activer les boutons Valider/Modifier
+                    "order_number": order_number,
+                    "product_name": self.pending_ticket_validation.get("product_name", ""),
+                    "problem_description": self.pending_ticket_validation.get("problem_description", ""),
+                    "priority": {
+                        "code": priority_code,
+                        "label": self._get_priority_label(priority_code),
+                        "emoji": self._get_priority_emoji(priority_code),
+                    },
+                    "warranty_covered": self.pending_ticket_validation.get("warranty_covered", False),
+                    "language": language
+                }
+                logger.info(f"🎯 Boutons activés pour {temp_ticket_id}")
 
             # Récupérer le lien produit si détecté
             product_link = None

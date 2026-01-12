@@ -272,13 +272,14 @@ class SAVWorkflowEngine:
         # Sauvegarder le ticket en mémoire
         self.active_tickets[ticket.ticket_id] = ticket
 
-        # 🎯 NOUVEAU: Ne persister en base que si validation non requise
-        # Si validation requise, attendre la confirmation de l'utilisateur
-        if not (ticket.client_summary and ticket.client_summary.validation_required):
-            await self._persist_ticket(ticket)
-            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base (pas de validation requise)")
+        # 🎯 TOUJOURS persister en base, même si validation requise
+        # Les tickets en attente de validation seront marqués avec status='pending_validation'
+        await self._persist_ticket(ticket)
+
+        if ticket.client_summary and ticket.client_summary.validation_required:
+            logger.info(f"⏳ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base avec validation requise")
         else:
-            logger.info(f"⏳ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} en attente de validation utilisateur (non persisté)")
+            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base (pas de validation requise)")
 
         logger.info(
             f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} traité: "
