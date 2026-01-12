@@ -106,14 +106,16 @@ Dès que tu vois "[CLIENT A UPLOADÉ X PHOTO(S)...]":
 "Merci pour les photos. Voici le récapitulatif de votre demande :
 
 📋 RÉCAPITULATIF
-- Produit : [modèle/référence SI MENTIONNÉ par le client, sinon "Canapé d'angle"]
+- Commande : [numéro de commande mentionné]
+- Produit : [EXACTEMENT le terme utilisé par le client, ex: "canapé", "table", etc. - NE PAS ajouter de détails]
 - Problème : [description EXACTE donnée par le client]
 - Photos : Reçues ✓
 
 Pouvez-vous confirmer que ces informations sont correctes ?"
 
 ⚠️ RÈGLES ÉTAPE 2:
-- Utiliser UNIQUEMENT les infos données par le client
+- Toujours afficher le numéro de commande en premier
+- Utiliser UNIQUEMENT les termes EXACTS du client pour le produit (ne pas ajouter modèle/couleur/référence)
 - NE PAS inventer de détails
 - NE PAS analyser les photos
 - Format récapitulatif OBLIGATOIRE
@@ -537,7 +539,7 @@ Utilise ces infos pour réponse rapide et pertinente.
             elif self.awaiting_confirmation and self.pending_ticket_validation:
                 if self.is_user_confirming(user_message):
                     logger.info("✅ Client confirme le ticket → Création")
-                    sav_ticket_data = await self.create_ticket_after_validation()
+                    sav_ticket_data = await self.create_ticket_after_validation(db_session=db_session)
                     # Le GPT a déjà répondu, on n'a pas besoin de modifier sa réponse
                 elif self.is_user_rejecting(user_message):
                     logger.info("❌ Client rejette le ticket → Réinitialisation")
@@ -558,6 +560,26 @@ Utilise ces infos pour réponse rapide et pertinente.
                 )
                 # Pas de ticket créé, juste données pour validation
                 sav_ticket_data = {"validation_pending": True, "validation_data": validation_data}
+
+                # 🎯 GÉNERER ticket_data IMMÉDIATEMENT pour afficher les boutons
+                temp_ticket_id = f"PENDING-{order_number}"
+                priority_code = self.pending_ticket_validation.get("priority", "P3")
+
+                self.ticket_data = {
+                    "ticket_id": temp_ticket_id,
+                    "requires_validation": True,  # ✅ Activer les boutons Valider/Modifier
+                    "order_number": order_number,
+                    "product_name": self.pending_ticket_validation.get("product_name", ""),
+                    "problem_description": self.pending_ticket_validation.get("problem_description", ""),
+                    "priority": {
+                        "code": priority_code,
+                        "label": self._get_priority_label(priority_code),
+                        "emoji": self._get_priority_emoji(priority_code),
+                    },
+                    "warranty_covered": self.pending_ticket_validation.get("warranty_covered", False),
+                    "language": language
+                }
+                logger.info(f"🎯 Boutons activés pour {temp_ticket_id}")
 
             # Récupérer le lien produit si détecté
             product_link = None
@@ -954,6 +976,12 @@ Utilise ces infos pour réponse rapide et pertinente.
                 customer_tier="standard",
                 product_value=self.client_data.get("amount", 0.0)
             )
+
+            # 🎯 FORCER la persistence après validation client
+            # Le ticket a validation_required=True donc il n'a pas été persisté automatiquement
+            # Maintenant que le client a confirmé, on persiste manuellement
+            await workflow_engine._persist_ticket(ticket, raise_on_error=True)
+            logger.info(f"✅ Ticket {ticket.ticket_id} persisté en base après validation client")
 
             # Générer message preuves
             evidence_message = evidence_collector.generate_evidence_request_message(

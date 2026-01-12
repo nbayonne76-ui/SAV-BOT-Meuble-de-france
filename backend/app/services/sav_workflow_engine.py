@@ -166,7 +166,7 @@ class SAVWorkflowEngine:
             }
         }
 
-    async def _persist_ticket(self, ticket: SAVTicket):
+    async def _persist_ticket(self, ticket: SAVTicket, raise_on_error: bool = False):
         """Persist ticket to database if db_session is available"""
         if self.db_session:
             try:
@@ -179,7 +179,11 @@ class SAVWorkflowEngine:
                 logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} sauvegardé dans la base de données")
             except Exception as e:
                 logger.error(f"❌ Erreur persistence ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)}: {e}")
-                # Ne pas lever l'exception pour ne pas bloquer le workflow
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                if raise_on_error:
+                    raise  # Lever l'exception pour validation par bouton
+                # Sinon ne pas lever l'exception pour ne pas bloquer le workflow automatique
         else:
             logger.debug(f"Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} non persisté (pas de session DB)")
 
@@ -268,13 +272,14 @@ class SAVWorkflowEngine:
         # Sauvegarder le ticket en mémoire
         self.active_tickets[ticket.ticket_id] = ticket
 
-        # 🎯 NOUVEAU: Ne persister en base que si validation non requise
-        # Si validation requise, attendre la confirmation de l'utilisateur
-        if not (ticket.client_summary and ticket.client_summary.validation_required):
-            await self._persist_ticket(ticket)
-            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base (pas de validation requise)")
+        # 🎯 TOUJOURS persister en base, même si validation requise
+        # Les tickets en attente de validation seront marqués avec status='pending_validation'
+        await self._persist_ticket(ticket)
+
+        if ticket.client_summary and ticket.client_summary.validation_required:
+            logger.info(f"⏳ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base avec validation requise")
         else:
-            logger.info(f"⏳ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} en attente de validation utilisateur (non persisté)")
+            logger.info(f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} persisté en base (pas de validation requise)")
 
         logger.info(
             f"✅ Ticket {input_sanitizer.sanitize_for_logging(ticket.ticket_id)} traité: "

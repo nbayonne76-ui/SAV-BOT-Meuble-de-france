@@ -358,6 +358,12 @@ else:
     if not cors_origins:
         cors_origins = settings.cors_origins_list
 
+# CRITICAL: Always include Railway frontend URL in production
+railway_frontend_url = "https://proactive-nurturing-production.up.railway.app"
+if railway_frontend_url not in cors_origins:
+    cors_origins.append(railway_frontend_url)
+    logger.info(f"✅ Added Railway frontend URL to CORS: {railway_frontend_url}")
+
 logger.info(f"CORS allowed origins: {cors_origins}")
 
 app.add_middleware(
