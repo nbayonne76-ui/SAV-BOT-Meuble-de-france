@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # backend/app/services/chatbot.py
 from openai import OpenAI
 import logging

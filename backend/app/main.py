@@ -767,10 +767,10 @@ def main():
     return app
 
 
-async def run_server_async():
+def run_server():
     """
-    Async version of server runner.
-    Uses asyncio to properly handle the event loop.
+    Run the application with graceful shutdown handling.
+    Uses uvicorn.run() which properly manages the event loop.
     """
     # Signal handler for graceful shutdown
     def signal_handler(signum, frame):
@@ -783,24 +783,20 @@ async def run_server_async():
         signal.signal(signal.SIGTERM, signal_handler)
         signal.signal(signal.SIGINT, signal_handler)
 
-    # Configure uvicorn with graceful shutdown settings
-    config = uvicorn.Config(
-        "app.main:app",
-        host=settings.HOST,
-        port=settings.PORT,
-        reload=settings.DEBUG,
-        log_level="info" if settings.DEBUG else "warning",
-        access_log=settings.DEBUG,
-        # Graceful shutdown settings
-        timeout_keep_alive=5,  # Keep-alive timeout
-        timeout_graceful_shutdown=30,  # Max time to wait for shutdown
-    )
-
-    server = uvicorn.Server(config)
-
     try:
         logger.info(f"Starting server on {settings.HOST}:{settings.PORT}")
-        await server.serve()
+        # Use uvicorn.run() instead of Server class to avoid nested event loop issues
+        uvicorn.run(
+            app,  # Pass the app instance directly, not as a string
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=settings.DEBUG,
+            log_level="info" if settings.DEBUG else "warning",
+            access_log=settings.DEBUG,
+            # Graceful shutdown settings
+            timeout_keep_alive=5,  # Keep-alive timeout
+            timeout_graceful_shutdown=30,  # Max time to wait for shutdown
+        )
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
     except Exception as e:
@@ -808,15 +804,6 @@ async def run_server_async():
         raise
     finally:
         logger.info("Server stopped")
-
-
-def run_server():
-    """
-    Run the application with graceful shutdown handling.
-    This contains the previous behavior of `main()` when executed directly.
-    Properly handles the event loop without calling asyncio.run() from within one.
-    """
-    asyncio.run(run_server_async())
 
 
 if __name__ == "__main__":
