@@ -297,17 +297,38 @@ async def clear_session(
     return {"success": False, "message": "Session not found"}
 
 
+def _get_validation_response_message(language: str = "fr") -> str:
+    """Get localized validation success message"""
+    messages = {
+        "fr": "✅ Parfait ! Votre demande a été enregistrée.\n\nVotre ticket a été créé avec succès. Notre équipe va traiter votre demande dans les meilleurs délais.\n\nVous recevrez une confirmation par email avec le numéro de suivi.\n\nY a-t-il autre chose pour laquelle je peux vous aider ?",
+        "en": "✅ Perfect! Your request has been recorded.\n\nYour support ticket has been created successfully. Our team will handle your request as quickly as possible.\n\nYou will receive a confirmation email with the tracking number.\n\nIs there anything else I can help you with?",
+        "ar": "✅ ممتاز! تم تسجيل طلبك.\n\nتم إنشاء تذكرة الدعم الخاصة بك بنجاح. سيقوم فريقنا بمعالجة طلبك في أسرع وقت ممكن.\n\nستتلقى رسالة بريد إلكترونية تأكيد برقم المتابعة.\n\nهل هناك شيء آخر يمكنني مساعدتك به?"
+    }
+    return messages.get(language, messages["fr"])
+
+def _get_cancel_response_message(language: str = "fr") -> str:
+    """Get localized cancel response message"""
+    messages = {
+        "fr": "D'accord, je recommence. Pouvez-vous me redonner les informations corrigées ?",
+        "en": "Alright, let's start over. Can you give me the corrected information?",
+        "ar": "حسناً، لننبدأ من جديد. هل يمكنك إعطائي المعلومات المصححة؟"
+    }
+    return messages.get(language, messages["fr"])
+
+
 @router.post("/validate/{ticket_id}", status_code=status.HTTP_200_OK)
 @limiter.limit(RateLimits.API_WRITE)
 async def validate_ticket(
     request: Request,
     ticket_id: str,
+    language: str = "fr",
     current_user: Optional[UserDB] = Depends(OptionalAuth()),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Validate a ticket and persist it to the database.
     This is called when the user clicks "Valider" on the recap.
+    Language parameter allows localized response messages.
     """
     try:
         # 🎯 Gérer les tickets temporaires (PENDING-*) et les tickets réels (SAV-*)
@@ -343,7 +364,7 @@ async def validate_ticket(
                 "success": True,
                 "message": "Ticket validé et créé dans le système",
                 "ticket_id": ticket_data["ticket_id"],
-                "response": "✅ Parfait ! Votre demande a été enregistrée.\n\nVotre ticket a été créé avec succès. Notre équipe va traiter votre demande dans les meilleurs délais.\n\nVous recevrez une confirmation par email avec le numéro de suivi.\n\nY a-t-il autre chose pour laquelle je peux vous aider ?"
+                "response": _get_validation_response_message(language)
             }
 
         # Validate ticket ID format for real tickets
@@ -374,7 +395,7 @@ async def validate_ticket(
             "success": True,
             "message": "Ticket validé et créé dans le système",
             "ticket_id": result.get("ticket_id"),
-            "response": "✅ Parfait ! Votre demande a été enregistrée.\n\nVotre ticket a été créé avec succès. Notre équipe va traiter votre demande dans les meilleurs délais.\n\nVous recevrez une confirmation par email avec le numéro de suivi.\n\nY a-t-il autre chose pour laquelle je peux vous aider ?"
+            "response": _get_validation_response_message(language)
         }
 
     except HTTPException:
@@ -392,11 +413,13 @@ async def validate_ticket(
 async def cancel_ticket(
     request: Request,
     ticket_id: str,
+    language: str = "fr",
     current_user: Optional[UserDB] = Depends(OptionalAuth())
 ):
     """
     Cancel a ticket that is pending validation.
     This is called when the user clicks "Modifier" on the recap.
+    Language parameter allows localized response messages.
     """
     try:
         # 🎯 Gérer les tickets temporaires (PENDING-*)
@@ -431,7 +454,7 @@ async def cancel_ticket(
             return {
                 "success": True,
                 "message": "Ticket annulé",
-                "response": "D'accord, je recommence. Pouvez-vous me redonner les informations corrigées ?"
+                "response": _get_cancel_response_message(language)
             }
 
         # Validate ticket ID format for real tickets
@@ -458,7 +481,7 @@ async def cancel_ticket(
         return {
             "success": True,
             "message": "Ticket annulé",
-            "response": "D'accord, je recommence. Pouvez-vous me redonner les informations corrigées ?"
+            "response": _get_cancel_response_message(language)
         }
 
     except HTTPException:

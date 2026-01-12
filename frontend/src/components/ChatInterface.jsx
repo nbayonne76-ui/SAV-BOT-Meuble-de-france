@@ -313,10 +313,13 @@ const ChatInterface = () => {
   // 🎯 Fonction pour valider un ticket
   const handleValidateTicket = async (ticketId) => {
     try {
-      const response = await fetch(`${API_URL}/api/chat/validate/${ticketId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `${API_URL}/api/chat/validate/${ticketId}?language=${selectedLanguage}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
 
       // Attempt to parse body regardless of status for better error messages
       const responseBody = await response.json().catch(() => null);
@@ -359,16 +362,29 @@ const ChatInterface = () => {
   // 🎯 Fonction pour annuler/modifier un ticket
   const handleCancelTicket = async (ticketId) => {
     try {
-      const response = await fetch(`${API_URL}/api/chat/cancel/${ticketId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
+      const response = await fetch(
+        `${API_URL}/api/chat/cancel/${ticketId}?language=${selectedLanguage}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      // Attempt to parse body regardless of status for better error messages
+      const responseBody = await response.json().catch(() => null);
 
       if (!response.ok) {
-        throw new Error("Erreur annulation");
+        console.error("Cancel error response:", response.status, responseBody);
+        const serverMsg =
+          responseBody?.detail ||
+          responseBody?.error ||
+          responseBody?.message ||
+          t("chat.error_ticket_cancel");
+        alert(serverMsg);
+        return;
       }
 
-      const data = await response.json();
+      const data = responseBody;
 
       // Afficher le message de réinitialisation
       const resetMessage = {
