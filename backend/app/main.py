@@ -767,10 +767,10 @@ def main():
     return app
 
 
-def run_server():
+async def run_server_async():
     """
-    Run the application with graceful shutdown handling.
-    This contains the previous behavior of `main()` when executed directly.
+    Async version of server runner.
+    Uses asyncio to properly handle the event loop.
     """
     # Signal handler for graceful shutdown
     def signal_handler(signum, frame):
@@ -800,7 +800,7 @@ def run_server():
 
     try:
         logger.info(f"Starting server on {settings.HOST}:{settings.PORT}")
-        server.run()
+        await server.serve()
     except KeyboardInterrupt:
         logger.info("Received keyboard interrupt, shutting down...")
     except Exception as e:
@@ -808,6 +808,15 @@ def run_server():
         raise
     finally:
         logger.info("Server stopped")
+
+
+def run_server():
+    """
+    Run the application with graceful shutdown handling.
+    This contains the previous behavior of `main()` when executed directly.
+    Properly handles the event loop without calling asyncio.run() from within one.
+    """
+    asyncio.run(run_server_async())
 
 
 if __name__ == "__main__":
