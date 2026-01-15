@@ -60,12 +60,12 @@ class MeubledeFranceChatbot:
         prompts = {
             "fr": """Tu es un assistant SAV professionnel et expert pour Meuble de France, entreprise de mobilier haut de gamme fondée en 1925.
 
-🏢 À PROPOS DE MEUBLE DE FRANCE:
+A PROPOS DE MEUBLE DE FRANCE:
 - Fondée en 1925 (près de 100 ans d'expertise)
 - Spécialiste mobilier personnalisable haut de gamme
 - Gammes: Salon, Salle à manger, Chambre, Décoration
 
-🎯 TON RÔLE:
+TON RÔLE:
 - Identifier précisément le produit concerné dans notre catalogue
 - Diagnostiquer le problème avec expertise
 - Proposer solutions adaptées selon produit et garantie
@@ -79,21 +79,21 @@ class MeubledeFranceChatbot:
 - Proactif: Anticipe les besoins, pose bonnes questions
 - Clair: Évite jargon technique, explique simplement
 
-📷 GESTION DES PHOTOS:
+GESTION DES PHOTOS:
 - ✅ TU PEUX recevoir des photos uploadées par le client
 - Quand une photo est uploadée, tu verras: "[CLIENT A UPLOADÉ X PHOTO(S): URL]"
 - ⚠️ NE PAS ANALYSER LES PHOTOS - C'est le rôle du SAV
 - Accuser réception: "Merci pour les photos. Reçues ✓"
 
-📋 MÉTHODOLOGIE SAV SIMPLIFIÉE (3 ÉTAPES SEULEMENT):
+METHODOLOGIE SAV SIMPLIFIEE (3 ETAPES SEULEMENT):
 
-**ÉTAPE 1️⃣ - PREMIÈRE RÉPONSE** (Message COURT et empathique)
+**ETAPE 1 - PREMIERE REPONSE** (Message COURT et empathique)
 Dès que le client mentionne un problème:
 
 "Je suis désolé d'entendre cela. Pourriez-vous s'il vous plaît envoyer des photos du [problème mentionné] ?
 Cela permettra à notre service après-vente de traiter votre demande rapidement."
 
-⚠️ RÈGLES ÉTAPE 1:
+REGLES ETAPE 1:
 - Message COURT (2 lignes max)
 - NE PAS poser 10 questions
 - NE PAS demander le modèle exact, couleur, etc.
@@ -104,7 +104,7 @@ Dès que tu vois "[CLIENT A UPLOADÉ X PHOTO(S)...]":
 
 "Merci pour les photos. Voici le récapitulatif de votre demande :
 
-📋 RÉCAPITULATIF
+RECAPITULATIF
 - Commande : [numéro de commande mentionné]
 - Produit : [EXACTEMENT le terme utilisé par le client, ex: "canapé", "table", etc. - NE PAS ajouter de détails]
 - Problème : [description EXACTE donnée par le client]
@@ -112,7 +112,7 @@ Dès que tu vois "[CLIENT A UPLOADÉ X PHOTO(S)...]":
 
 Pouvez-vous confirmer que ces informations sont correctes ?"
 
-⚠️ RÈGLES ÉTAPE 2:
+REGLES ETAPE 2:
 - Toujours afficher le numéro de commande en premier
 - Utiliser UNIQUEMENT les termes EXACTS du client pour le produit (ne pas ajouter modèle/couleur/référence)
 - NE PAS inventer de détails
@@ -127,7 +127,7 @@ Notre équipe reviendra vers vous dans les plus brefs délais.
 
 Numéro de ticket : [AUTO-GÉNÉRÉ]"
 
-⚠️ RÈGLES ÉTAPE 3:
+REGLES ETAPE 3:
 - Créer le ticket UNIQUEMENT après validation
 - Message de confirmation simple
 - Pas de détails techniques inutiles
@@ -173,7 +173,7 @@ Numéro de ticket : [AUTO-GÉNÉRÉ]"
 - ✅ Proposer entretien préventif pour éviter récidive
 - ✅ Escalader si problème hors compétence ou complexe
 
-⚠️ NE JAMAIS:
+NE JAMAIS:
 - ❌ Promettre délais sans validation équipe
 - ❌ Garantir solution avant diagnostic complet
 - ❌ Minimiser inquiétude client ("c'est rien", "c'est normal")
@@ -588,7 +588,7 @@ DONNÉES CLIENT:
                 product_info = product_catalog.generate_product_context(detected_product)
                 context += f"""
 
-🎯 PRODUIT CLIENT IDENTIFIÉ:
+PRODUIT CLIENT IDENTIFIE:
 {product_info}
 
 Utilise ces informations pour des réponses précises et personnalisées.
@@ -598,7 +598,7 @@ Utilise ces informations pour des réponses précises et personnalisées.
             if issue_analysis and issue_analysis.get("match"):
                 context += f"""
 
-⚠️ ANALYSE PROBLÈME:
+ANALYSE PROBLEME:
 - Problème similaire connu: {', '.join(issue_analysis.get('matched_issues', [])[:2])}
 - Garantie: {issue_analysis.get('warranty', 'À vérifier')}
 - Maintenance recommandée disponible dans le contexte produit
@@ -1205,29 +1205,29 @@ Utilise ces infos pour réponse rapide et pertinente.
          BILAN CONVERSATION - MEUBLE DE FRANCE
 ═══════════════════════════════════════════════════════
 
-📅 DATE: {datetime.now().strftime('%d/%m/%Y - %H:%M')}
-🆔 TICKET: {self.ticket_data.get('ticket_id')}
-🔢 COMMANDE: {self.client_data.get('order_number', 'N/A')}
+DATE: {datetime.now().strftime('%d/%m/%Y - %H:%M')}
+TICKET: {self.ticket_data.get('ticket_id')}
+COMMANDE: {self.client_data.get('order_number', 'N/A')}
 
-👤 CLIENT:
+CLIENT:
 ├── Nom: {self.client_data.get('name', 'N/A')}
 ├── Email: {self.client_data.get('email', 'N/A')}
 ├── Tél: {self.client_data.get('phone', 'N/A')}
 └── Langue: {self.ticket_data.get('language', 'Français')}
 
-🛋️ PRODUIT CONCERNÉ:
+PRODUIT CONCERNE:
 ├── Article: {self.client_data.get('product', 'N/A')}
 ├── Livraison: {self.client_data.get('delivery_date', 'N/A')}
 └── Garantie: {self.client_data.get('warranty_status', 'N/A')}
 
-⚠️ PROBLÈME SIGNALÉ:
+PROBLEME SIGNALE:
 {self.ticket_data.get('problem_description', 'N/A')}
 
-🎯 CLASSIFICATION:
-{priority_info.get('emoji')} PRIORITÉ: {priority_info.get('label')} ({priority_info.get('code')})
+CLASSIFICATION:
+{priority_info.get('emoji')} PRIORITE: {priority_info.get('label')} ({priority_info.get('code')})
 SLA: < {priority_info.get('sla_hours')}h
 
-✅ ACTIONS PRISES:
+ACTIONS PRISES:
 ├── Dossier SAV créé
 ├── Photos uploadées: {len(self.ticket_data.get('photos', []))}
 ├── Notification équipe: {'Oui' if priority_info.get('requires_escalation') else 'Non'}
