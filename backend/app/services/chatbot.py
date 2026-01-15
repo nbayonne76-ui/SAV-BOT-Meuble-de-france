@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# backend/app/services/chatbot.py
 from openai import OpenAI
 import logging
 from typing import Dict, List, Optional
@@ -401,8 +399,6 @@ GENERIC ADVICE ONLY - NO SPECIFIC REFERENCES.""",
 - **المراتب**: 10 سنوات للترهل >2.5 سم
 
 نصيحة عامة فقط - بدون مراجع محددة."""
-
-[Rest follows same structure...]"""
         }
 
         return prompts.get(language, prompts["fr"])
