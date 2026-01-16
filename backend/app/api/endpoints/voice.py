@@ -21,6 +21,7 @@ from app.core.circuit_breaker import CircuitBreakerManager, CircuitBreakerError
 from app.services.sav_workflow_engine import sav_workflow_engine
 from app.services.warranty_service import warranty_service
 from app.models.warranty import WarrantyType
+from app.services.voice_emotion_detector import get_voice_emotion_detector
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -186,6 +187,7 @@ class ChatResponse(BaseModel):
     session_id: str
     action: Optional[str] = None  # "create_ticket" si le client a confirmé
     ticket_data: Optional[dict] = None  # Données extraites pour le ticket
+    emotion_analysis: Optional[dict] = None  # Analyse emotionnelle du client
 
 
 @router.post("/transcribe", response_model=VoiceTranscriptionResponse)
@@ -433,12 +435,20 @@ Après avoir demandé "Puis-je faire autre chose pour vous ?", ÉCOUTER:
                 detail="Service de chat temporairement indisponible. Veuillez réessayer dans quelques instants."
             )
 
+        # Analyze emotion from the user's message
+        emotion_detector = get_voice_emotion_detector()
+        emotion_analysis = await emotion_detector.analyze_emotion(
+            transcript=request.message,
+            conversation_history=request.conversation_history
+        )
+        logger.info(f"Emotion analysis: {emotion_analysis['emotion']} (confidence: {emotion_analysis['confidence']:.2f})")
+
         # Détecter l'action et extraire les données du ticket
         action = None
         ticket_data = None
 
         # Si c'est un récapitulatif, extraire les données du ticket pour validation
-        if "Je récapitule" in response_text:
+        if "Je récapitule" in response_text or "recapitule" in response_text.lower():
             action = "recap"
             ticket_data = extract_ticket_data_from_recap(response_text)
             logger.info(f"📋 Récapitulatif - Données extraites: {ticket_data}")
@@ -460,7 +470,8 @@ Après avoir demandé "Puis-je faire autre chose pour vous ?", ÉCOUTER:
             response=response_text,
             session_id=request.session_id or "default",
             action=action,
-            ticket_data=ticket_data
+            ticket_data=ticket_data,
+            emotion_analysis=emotion_analysis
         )
 
     except Exception as e:
@@ -581,6 +592,7 @@ class CreateTicketRequest(BaseModel):
     order_number: str
     conversation_transcript: Optional[str] = None
     photos: list[str] = []  # URLs des photos uploadées
+    emotion_analysis: Optional[dict] = None  # Analyse emotionnelle pour priorite automatique
 
 
 @router.post("/create-ticket")
@@ -634,6 +646,33 @@ async def create_ticket_from_voice(request: CreateTicketRequest):
                 ticket.notes = []
             ticket.notes.append(f"Transcription de la conversation vocale:\n{request.conversation_transcript}")
 
+        # Apply emotion-based priority if emotion analysis is provided
+        if request.emotion_analysis:
+            emotion = request.emotion_analysis.get("emotion", "calme")
+            emotion_priority = request.emotion_analysis.get("priority", "P3")
+            confidence = request.emotion_analysis.get("confidence", 0.0)
+            indicators = request.emotion_analysis.get("indicators", [])
+
+            # Override ticket priority based on emotion
+            ticket.priority = emotion_priority
+            ticket.voice_emotion = emotion
+            ticket.voice_emotion_confidence = confidence
+            ticket.voice_emotion_indicators = indicators
+
+            logger.info(f"🎯 Priorite basee sur emotion: {emotion} -> {emotion_priority} (confiance: {confidence:.2f})")
+
+            # Add note about emotion-based priority
+            if not hasattr(ticket, 'notes'):
+                ticket.notes = []
+            emotion_note = (
+                f"Priorite automatique basee sur analyse emotionnelle:\n"
+                f"- Emotion detectee: {emotion}\n"
+                f"- Confiance: {confidence:.0%}\n"
+                f"- Priorite assignee: {emotion_priority}\n"
+                f"- Indicateurs: {', '.join(indicators[:3])}"
+            )
+            ticket.notes.append(emotion_note)
+
         # Ajouter les photos uploadées au ticket
         if request.photos:
             if not hasattr(ticket, 'attachments'):
@@ -643,7 +682,7 @@ async def create_ticket_from_voice(request: CreateTicketRequest):
 
         logger.info(f"✅ Ticket SAV créé: {ticket.ticket_id}")
 
-        return {
+        response_data = {
             "success": True,
             "ticket_id": ticket.ticket_id,
             "message": "Ticket SAV créé avec succès",
@@ -657,6 +696,17 @@ async def create_ticket_from_voice(request: CreateTicketRequest):
                 "source": "voice_chat"
             }
         }
+
+        # Include emotion analysis in response if available
+        if request.emotion_analysis:
+            response_data["data"]["emotion"] = {
+                "detected": ticket.voice_emotion,
+                "confidence": ticket.voice_emotion_confidence,
+                "indicators": ticket.voice_emotion_indicators,
+                "priority_assigned": ticket.priority
+            }
+
+        return response_data
 
     except Exception as e:
         logger.error(f"❌ Erreur création ticket: {e}")

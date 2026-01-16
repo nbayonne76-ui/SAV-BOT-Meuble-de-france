@@ -54,6 +54,11 @@ class TicketDB(Base):
     tone_score = Column(Float)
     tone_keywords = Column(JSON)  # List of keywords
 
+    # Voice emotion analysis (for voice channel)
+    voice_emotion = Column(String(50))  # Detected emotion: angry, irritated, desperate, sad, calm
+    voice_emotion_confidence = Column(Float)  # Confidence score 0-1
+    voice_emotion_indicators = Column(JSON)  # List of indicators that led to emotion detection
+
     # SLA & Timing
     created_at = Column(DateTime, default=datetime.now, index=True)  # For sorting and date ranges
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now, index=True)  # For recent activity
