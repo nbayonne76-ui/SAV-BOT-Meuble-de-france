@@ -5,10 +5,6 @@ import {
   Camera,
   X,
   Loader2,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
 
@@ -20,22 +16,10 @@ const ChatInterface = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [sessionId] = useState(`session-${Date.now()}`);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isVoiceSupported, setIsVoiceSupported] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [isSpeechEnabled, setIsSpeechEnabled] = useState(false); // Activer voix par défaut
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const { language, setLanguage, t, languages } = useLanguage();
+  const { language, t } = useLanguage();
   const selectedLanguage = language;
-  // Language management (global)
-  const languageLocales = Object.fromEntries(
-    Object.entries(languages).map(([k, v]) => [k, v.locale])
-  );
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-  const recognitionRef = useRef(null);
-  const isRecognitionActive = useRef(false);
-  const speechSynthesisRef = useRef(null);
 
   // Message d'accueil (i18n)
   useEffect(() => {
@@ -48,234 +32,14 @@ const ChatInterface = () => {
         timestamp: new Date(),
       },
     ]);
-
-    // 🔊 Parler le message d'accueil après 1 seconde
-    setTimeout(() => {
-      if (isSpeechEnabled) {
-        const shortWelcome = t("chat.welcome.short");
-        speakText(shortWelcome);
-      }
-    }, 1000);
-  }, [selectedLanguage, isSpeechEnabled]);
+  }, [selectedLanguage]);
 
   // Auto-scroll vers le bas
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 🎤 Initialiser Web Speech API - VERSION AMÉLIORÉE
-  useEffect(() => {
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      console.warn("⚠️ Web Speech API non supportée");
-      setIsVoiceSupported(false);
-      return;
-    }
-
-    setIsVoiceSupported(true);
-    const recognition = new SpeechRecognition();
-
-    // Configuration optimisée
-    recognition.lang = languageLocales[selectedLanguage] || "fr-FR";
-    recognition.continuous = true; // Continuer à écouter
-    recognition.interimResults = true; // Afficher résultats en temps réel
-    recognition.maxAlternatives = 1;
-
-    // 🎯 Gérer les résultats (interim + final)
-    recognition.onresult = (event) => {
-      let interimTranscript = "";
-      let finalTranscript = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcriptPiece = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcriptPiece + " ";
-        } else {
-          interimTranscript += transcriptPiece;
-        }
-      }
-
-      // Afficher résultats en temps réel
-      if (interimTranscript) {
-        setTranscript(interimTranscript);
-      }
-
-      // Ajouter résultat final au champ de saisie
-      if (finalTranscript) {
-        setInputMessage((prev) => {
-          const current = prev.trim();
-          const newText = finalTranscript.trim();
-          return current ? `${current} ${newText}` : newText;
-        });
-        setTranscript("");
-      }
-    };
-
-    // 🎯 Gérer les erreurs
-    recognition.onerror = (event) => {
-      console.error("❌ Erreur reconnaissance:", event.error);
-
-      // Ne pas afficher d'alerte pour "no-speech" ou "aborted"
-      if (event.error === "no-speech" || event.error === "aborted") {
-        console.log("🔇 Pas de parole détectée ou arrêt manuel");
-      } else if (event.error === "not-allowed") {
-        alert(t("chat.alert_microphone_denied"));
-      } else if (event.error === "network") {
-        alert(t("chat.alert_network"));
-      } else {
-        console.error("Erreur inconnue:", event.error);
-      }
-
-      isRecognitionActive.current = false;
-      setIsRecording(false);
-      setTranscript("");
-    };
-
-    // 🎯 Redémarrer automatiquement si arrêt inattendu
-    recognition.onend = () => {
-      console.log("🎤 Reconnaissance terminée");
-
-      // Si on devrait toujours enregistrer, redémarrer
-      if (isRecognitionActive.current && isRecording) {
-        try {
-          recognition.start();
-          console.log("🔄 Redémarrage automatique...");
-        } catch (error) {
-          console.error("❌ Impossible de redémarrer:", error);
-          isRecognitionActive.current = false;
-          setIsRecording(false);
-        }
-      } else {
-        isRecognitionActive.current = false;
-        setIsRecording(false);
-        setTranscript("");
-      }
-    };
-
-    // 🎯 Événement de démarrage
-    recognition.onstart = () => {
-      console.log("✅ Reconnaissance démarrée");
-      isRecognitionActive.current = true;
-      setIsRecording(true);
-    };
-
-    recognitionRef.current = recognition;
-
-    // Cleanup au démontage
-    return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (error) {
-          console.log("Cleanup error:", error);
-        }
-      }
-    };
-  }, []);
-
-  // Update recognition language when selection changes
-  useEffect(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.lang =
-        languageLocales[selectedLanguage] || "fr-FR";
-    }
-  }, [selectedLanguage]);
-
-  // 🔊 Initialiser Text-to-Speech (Synthèse vocale)
-  useEffect(() => {
-    if ("speechSynthesis" in window) {
-      speechSynthesisRef.current = window.speechSynthesis;
-      console.log("✅ Synthèse vocale disponible");
-    } else {
-      console.warn("⚠️ Synthèse vocale non supportée");
-    }
-
-    // Cleanup: arrêter la voix au démontage
-    return () => {
-      if (speechSynthesisRef.current) {
-        speechSynthesisRef.current.cancel();
-      }
-    };
-  }, []);
-
-  // 🔊 Fonction pour faire parler le bot
-  const speakText = (text) => {
-    if (!speechSynthesisRef.current || !isSpeechEnabled) return;
-
-    // Arrêter toute parole en cours
-    speechSynthesisRef.current.cancel();
-
-    // Nettoyer le texte (enlever markdown, emojis complexes, etc.)
-    const cleanText = text
-      .replace(/[#*_`]/g, "") // Enlever markdown
-      .replace(/\*\*/g, "") // Enlever gras
-      .replace(/\n\n/g, ". ") // Remplacer doubles sauts par point
-      .replace(/\n/g, " ") // Remplacer sauts simples par espace
-      .replace(/[🎯📋⚡🔒🛡️🎤]/g, "") // Enlever certains emojis
-      .trim();
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-
-    // Configuration voix selon la langue sélectionnée
-    const langLocale = languageLocales[selectedLanguage] || "fr-FR";
-    utterance.lang = langLocale;
-    utterance.rate = 1.1; // Vitesse (0.5 à 2)
-    utterance.pitch = 1.0; // Tonalité (0 à 2)
-    utterance.volume = 1.0; // Volume (0 à 1)
-
-    // Chercher une voix correspondant à la langue courte (fr/en/ar...)
-    const voices = speechSynthesisRef.current.getVoices();
-    const languageShort =
-      languages[selectedLanguage]?.short || selectedLanguage;
-    const matchedVoice = voices.find(
-      (voice) => voice.lang && voice.lang.startsWith(languageShort)
-    );
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
-    }
-
-    // Événements
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      console.log("🔊 Le bot parle...");
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      console.log("🔇 Le bot a fini de parler");
-    };
-
-    utterance.onerror = (error) => {
-      // L'erreur "interrupted" est normale quand on annule pour démarrer une nouvelle synthèse
-      if (error.error !== "interrupted") {
-        console.error("❌ Erreur synthèse vocale:", error);
-      }
-      setIsSpeaking(false);
-    };
-
-    // Parler
-    speechSynthesisRef.current.speak(utterance);
-  };
-
-  // 🔊 Arrêter la parole
-  const stopSpeaking = () => {
-    if (speechSynthesisRef.current) {
-      speechSynthesisRef.current.cancel();
-      setIsSpeaking(false);
-    }
-  };
-
-  // 🔊 Toggle activation voix
-  const toggleSpeech = () => {
-    if (isSpeaking) {
-      stopSpeaking();
-    }
-    setIsSpeechEnabled(!isSpeechEnabled);
-  };
-
-  // 🔧 Helper to build absolute URLs for files (handles absolute, protocol-missing, and relative paths)
+  // Helper to build absolute URLs for files (handles absolute, protocol-missing, and relative paths)
   const getAbsoluteUrl = (rawUrl) => {
     if (!rawUrl) return "";
     const url = String(rawUrl).trim();
@@ -348,11 +112,6 @@ const ChatInterface = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, confirmationMessage]);
-
-      // 🔊 Faire parler le bot
-      if (isSpeechEnabled && data.response) {
-        setTimeout(() => speakText(data.response), 300);
-      }
     } catch (error) {
       console.error("Erreur validation ticket:", error);
       alert(t("chat.error_ticket_validation"));
@@ -393,11 +152,6 @@ const ChatInterface = () => {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, resetMessage]);
-
-      // 🔊 Faire parler le bot
-      if (isSpeechEnabled && data.response) {
-        setTimeout(() => speakText(data.response), 300);
-      }
     } catch (error) {
       console.error("Erreur annulation ticket:", error);
       alert(t("chat.error_ticket_cancel"));
@@ -453,11 +207,6 @@ const ChatInterface = () => {
         setMessages((prev) => [...prev, goodbyeMessage]);
         setIsTyping(false);
 
-        // 🔊 Faire parler le message d'au revoir
-        if (isSpeechEnabled && data.response) {
-          speakText(data.response);
-        }
-
         // Attendre 3 secondes puis effacer la conversation
         setTimeout(async () => {
           console.log(
@@ -511,14 +260,6 @@ const ChatInterface = () => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      // 🔊 Faire parler le bot automatiquement
-      if (isSpeechEnabled && data.response) {
-        // Petit délai pour laisser le message s'afficher
-        setTimeout(() => {
-          speakText(data.response);
-        }, 300);
-      }
     } catch (error) {
       console.error("Erreur:", error);
       setMessages((prev) => [
@@ -599,147 +340,71 @@ const ChatInterface = () => {
     }
   };
 
-  // 🎤 Gérer l'enregistrement vocal - VERSION AMÉLIORÉE
-  const toggleVoiceRecording = () => {
-    if (!isVoiceSupported || !recognitionRef.current) {
-      alert(t("chat.stt_not_available"));
-      return;
-    }
-
-    if (isRecording || isRecognitionActive.current) {
-      // ⛔ Arrêter l'enregistrement
-      try {
-        isRecognitionActive.current = false;
-        recognitionRef.current.stop();
-        setIsRecording(false);
-        setTranscript("");
-        console.log("🛑 Enregistrement arrêté par l'utilisateur");
-      } catch (error) {
-        console.error("❌ Erreur arrêt:", error);
-        setIsRecording(false);
-        setTranscript("");
-      }
-    } else {
-      // ▶️ Démarrer l'enregistrement
-      try {
-        isRecognitionActive.current = true;
-        recognitionRef.current.start();
-        console.log("▶️ Démarrage enregistrement...");
-      } catch (error) {
-        console.error("❌ Erreur démarrage:", error);
-
-        // Si déjà en cours, arrêter puis redémarrer
-        if (error.message && error.message.includes("already")) {
-          try {
-            recognitionRef.current.stop();
-            setTimeout(() => {
-              try {
-                recognitionRef.current.start();
-              } catch (e) {
-                console.error("❌ Redémarrage échoué:", e);
-                alert(t("chat.error_mic_already_running"));
-              }
-            }, 100);
-          } catch (e) {
-            console.error("❌ Impossible d'arrêter:", e);
-          }
-        } else {
-          alert(t("chat.error_mic_not_allowed"));
-        }
-        isRecognitionActive.current = false;
-        setIsRecording(false);
-      }
-    }
-  };
-
   return (
     <div
-      className="flex flex-col h-full max-w-5xl mx-auto"
+      className="flex flex-col h-full"
       style={{
-        background: "linear-gradient(to bottom right, #20253F, #2C3650)",
+        backgroundColor: "#f5f5f5",
       }}
     >
-      {/* Header */}
-      <div
-        style={{ background: "linear-gradient(to right, #2C3650, #3A4560)" }}
-        className="text-white p-6 shadow-lg"
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">
-              {t("chat.header_main_title")}
-            </h1>
-            <p className="text-sm opacity-90 mt-1">{t("dashboard.title")}</p>
-          </div>
-
-          {/* 🔊 Contrôle vocal */}
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={toggleSpeech}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                isSpeechEnabled
-                  ? "bg-white text-red-600 hover:bg-gray-100"
-                  : "bg-red-800 text-white hover:bg-red-900"
-              }`}
-              title={
-                isSpeechEnabled
-                  ? t("chat.voice_title_on")
-                  : t("chat.voice_title_off")
-              }
-            >
-              {isSpeechEnabled ? (
-                <>
-                  <Volume2
-                    className={`w-5 h-5 ${isSpeaking ? "animate-pulse" : ""}`}
-                  />
-                  <span className="text-sm">{t("chat.voice_on")}</span>
-                  {isSpeaking && (
-                    <span className="text-xs opacity-75">
-                      {t("chat.voice_speaking_suffix")}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <VolumeX className="w-5 h-5" />
-                  <span className="text-sm">{t("chat.voice_off")}</span>
-                </>
-              )}
-            </button>
-
-            <div className="text-right text-xs opacity-80 border-l border-white/30 pl-4">
-              <p className="font-semibold">{t("chat.automation_label")}</p>
-              <p className="text-xs">{t("chat.automation_items")}</p>
-            </div>
-          </div>
+      {/* Header avec logo Mobilier de France */}
+      <div className="bg-white py-4 px-6 shadow-sm border-b border-gray-200">
+        <div className="flex items-center justify-center">
+          <h1 className="text-2xl font-light tracking-wide" style={{ color: "#20253F" }}>
+            <span className="font-bold text-3xl" style={{ fontFamily: "serif" }}>M</span>
+            <span className="font-light">obilier de </span>
+            <span className="font-bold text-3xl" style={{ fontFamily: "serif" }}>F</span>
+            <span className="font-light">rance</span>
+          </h1>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`flex ${
-              msg.role === "user" ? "justify-end" : "justify-start"
-            } fade-in`}
+      {/* Barre de navigation bleue */}
+      <div className="h-2" style={{ backgroundColor: "#20253F" }}></div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Section - SUIVI CLIENTELE */}
+        <div className="w-1/3 flex flex-col items-center justify-center p-6">
+          <h2
+            className="text-xl font-semibold tracking-wide mb-2"
+            style={{ color: "#20253F" }}
           >
-            <div
-              className={`max-w-[75%] rounded-2xl p-4 shadow-md ${
-                msg.role === "user"
-                  ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white"
-                  : "bg-white text-gray-800 border border-gray-200"
-              }`}
-            >
-              {/* Avatar */}
-              <div className="flex items-start space-x-3">
-                {msg.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold flex-shrink-0">
-                    M
-                  </div>
-                )}
-                <div className="flex-1">
-                  <p className="whitespace-pre-line leading-relaxed">
+            SUIVI CLIENTELE
+          </h2>
+          <a
+            href="#"
+            className="text-sm underline hover:no-underline"
+            style={{ color: "#20253F" }}
+            onClick={(e) => {
+              e.preventDefault();
+              // Navigate to voice interface
+              window.location.href = '/voice';
+            }}
+          >
+            Interface vocale dynamique
+          </a>
+        </div>
+
+        {/* Right Section - Chat Messages */}
+        <div className="w-2/3 flex flex-col p-4">
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {messages.map((msg, index) => (
+              <div
+                key={index}
+                className={`flex ${
+                  msg.role === "user" ? "justify-end" : "justify-start"
+                } fade-in`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-lg p-4 ${
+                    msg.role === "user"
+                      ? "text-white"
+                      : "text-white"
+                  }`}
+                  style={{ backgroundColor: "#20253F" }}
+                >
+                  <p className="whitespace-pre-line leading-relaxed text-sm">
                     {msg.content}
                   </p>
 
@@ -754,10 +419,10 @@ const ChatInterface = () => {
                             <img
                               src={getAbsoluteUrl(file.url)}
                               alt={file.original_name}
-                              className="w-24 h-24 object-cover rounded-lg border-2 border-white"
+                              className="w-20 h-20 object-cover rounded-lg border-2 border-white/30"
                             />
                           ) : (
-                            <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-xs text-gray-600">
+                            <div className="w-20 h-20 bg-gray-700 rounded-lg flex items-center justify-center text-xs text-gray-300">
                               {t("chat.file_video_label")}
                             </div>
                           )}
@@ -766,99 +431,59 @@ const ChatInterface = () => {
                     </div>
                   )}
 
-                  {/* 🎯 NOUVEAU: Boutons de validation */}
+                  {/* Boutons de validation */}
                   {msg.role === "assistant" &&
                     msg.requires_validation &&
                     msg.ticket_id && (
-                      <div className="mt-4 pt-4 border-t border-gray-200">
-                        <p className="text-sm font-semibold text-gray-700 mb-3">
+                      <div className="mt-4 pt-4 border-t border-white/20">
+                        <p className="text-sm font-semibold text-white/90 mb-3">
                           {t("chat.validate_prompt")}
                         </p>
                         <div className="flex gap-3">
                           <button
                             onClick={() => handleValidateTicket(msg.ticket_id)}
-                            className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                            className="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
                           >
                             {t("chat.btn_validate")}
                           </button>
                           <button
                             onClick={() => handleCancelTicket(msg.ticket_id)}
-                            className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                            className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg transition-all"
                           >
                             {t("chat.btn_modify")}
                           </button>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                          {t("chat.validate_hint")}
-                        </p>
                       </div>
                     )}
-
-                  {/* Metadata */}
-                  <div
-                    className={`flex items-center justify-between mt-2 text-xs ${
-                      msg.role === "user" ? "text-white/70" : "text-gray-500"
-                    }`}
-                  >
-                    <span>
-                      {msg.timestamp.toLocaleTimeString(
-                        msg.language === "en"
-                          ? "en-US"
-                          : msg.language === "ar"
-                          ? "ar-SA"
-                          : localStorage.getItem("selectedLanguage") === "en"
-                          ? "en-US"
-                          : localStorage.getItem("selectedLanguage") === "ar"
-                          ? "ar-SA"
-                          : "fr-FR",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }
-                      )}
-                    </span>
-                    {msg.language && (
-                      <span className="ml-2">
-                        🌍 {msg.language.toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-amber-600 font-bold flex-shrink-0">
-                    V
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Typing indicator */}
-        {isTyping && (
-          <div className="flex justify-start fade-in">
-            <div className="bg-white rounded-2xl p-4 shadow-md border border-gray-200">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold">
-                  M
-                </div>
-                <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"></div>
-                  <div
-                    className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.1s" }}
-                  ></div>
-                  <div
-                    className="w-2 h-2 bg-amber-500 rounded-full animate-bounce"
-                    style={{ animationDelay: "0.2s" }}
-                  ></div>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
+            ))}
 
-        <div ref={messagesEndRef} />
+            {/* Typing indicator */}
+            {isTyping && (
+              <div className="flex justify-start fade-in">
+                <div
+                  className="rounded-lg p-4 text-white"
+                  style={{ backgroundColor: "#20253F" }}
+                >
+                  <div className="flex space-x-2">
+                    <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 bg-white rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 bg-white rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
       </div>
 
       {/* Uploaded Files Preview */}
@@ -870,7 +495,7 @@ const ChatInterface = () => {
           <div className="flex space-x-2 overflow-x-auto pb-2">
             {uploadedFiles.map((file, index) => (
               <div key={index} className="relative group flex-shrink-0">
-                <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-amber-500">
+                <div className="w-16 h-16 rounded-lg overflow-hidden border-2 border-gray-300">
                   {file.type === "jpg" ||
                   file.type === "jpeg" ||
                   file.type === "png" ? (
@@ -881,7 +506,7 @@ const ChatInterface = () => {
                     />
                   ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xs">
-                      📹
+                      Video
                     </div>
                   )}
                 </div>
@@ -889,85 +514,21 @@ const ChatInterface = () => {
                   onClick={() => removeFile(index)}
                   className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg hover:bg-red-600 transition-colors"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3 h-3" />
                 </button>
-                <p className="text-xs text-gray-600 mt-1 text-center truncate w-20">
-                  {file.original_name}
-                </p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Input Area */}
-      <div className="bg-white p-6 border-t border-gray-200 shadow-lg">
-        {/* 🎤 Recording Indicator - VERSION AMÉLIORÉE */}
-        {isRecording && (
-          <div
-            className="mb-4 p-4 border-2 rounded-xl shadow-lg"
-            style={{
-              background:
-                "linear-gradient(to right, rgba(44, 54, 80, 0.1), rgba(58, 69, 96, 0.1))",
-              borderColor: "#2C3650",
-            }}
-          >
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="flex space-x-1">
-                <div
-                  className="w-2 h-6 bg-red-500 rounded animate-pulse"
-                  style={{ animationDelay: "0s" }}
-                ></div>
-                <div
-                  className="w-2 h-8 bg-red-500 rounded animate-pulse"
-                  style={{ animationDelay: "0.1s" }}
-                ></div>
-                <div
-                  className="w-2 h-6 bg-red-500 rounded animate-pulse"
-                  style={{ animationDelay: "0.2s" }}
-                ></div>
-                <div
-                  className="w-2 h-10 bg-red-500 rounded animate-pulse"
-                  style={{ animationDelay: "0.3s" }}
-                ></div>
-                <div
-                  className="w-2 h-6 bg-red-500 rounded animate-pulse"
-                  style={{ animationDelay: "0.4s" }}
-                ></div>
-              </div>
-              <span className="text-red-700 font-bold text-lg">
-                {t("chat.listening")}
-              </span>
-              <button
-                onClick={toggleVoiceRecording}
-                className="ml-auto bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                ⛔ {t("chat.stop_button")}
-              </button>
-            </div>
-            {transcript && (
-              <div className="mt-2 p-3 bg-white rounded-lg border border-red-200">
-                <p className="text-sm text-gray-500 mb-1">
-                  {t("chat.transcription_live_label")}
-                </p>
-                <p className="text-gray-800 font-medium italic">
-                  "{transcript}"
-                </p>
-              </div>
-            )}
-            {!transcript && (
-              <p className="text-sm text-gray-600 italic">
-                {t("chat.speak_now")}
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="flex items-end space-x-3">
-          {/* Upload Button */}
+      {/* Input Area - Style comme la capture d'écran */}
+      <div className="bg-white p-4 border-t border-gray-200">
+        <div className="flex items-center space-x-3 max-w-4xl mx-auto">
+          {/* Camera Button */}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="bg-amber-100 hover:bg-amber-200 text-amber-700 p-3 rounded-full transition-colors flex-shrink-0"
+            className="text-gray-400 hover:text-gray-600 p-2 transition-colors flex-shrink-0"
             title={t("chat.add_photos")}
           >
             <Camera className="w-6 h-6" />
@@ -981,77 +542,34 @@ const ChatInterface = () => {
             onChange={handleFileUpload}
           />
 
-          {/* 🎤 Voice Button - VERSION AMÉLIORÉE */}
-          {isVoiceSupported && (
-            <button
-              onClick={toggleVoiceRecording}
-              className={`relative p-3 rounded-full transition-all flex-shrink-0 shadow-lg ${
-                isRecording
-                  ? "bg-red-500 hover:bg-red-600 text-white ring-4 ring-red-200 animate-pulse"
-                  : "bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white"
-              }`}
-              title={
-                isRecording ? t("chat.stop_button") : t("chat.voice_mode_hint")
-              }
-            >
-              {isRecording ? (
-                <>
-                  <MicOff className="w-6 h-6" />
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-white"></span>
-                  </span>
-                </>
-              ) : (
-                <Mic className="w-6 h-6" />
-              )}
-            </button>
-          )}
-
           {/* Message Input */}
           <div className="flex-1">
-            <textarea
+            <input
+              type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={t("chat.placeholder")}
-              className="w-full border-2 border-gray-300 rounded-2xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none text-gray-900"
-              rows="1"
-              style={{
-                minHeight: "50px",
-                maxHeight: "150px",
-                color: "#1F2937",
-              }}
+              placeholder="Si vous preferez l'ecrit : n° de commande + Nom client + Description de votre attente"
+              className="w-full border border-gray-300 rounded-full px-5 py-3 focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-600 text-sm"
+              style={{ color: "#6B7280" }}
             />
           </div>
 
-          {/* Send Button */}
-          <button
-            onClick={sendMessage}
-            disabled={!inputMessage.trim() && uploadedFiles.length === 0}
-            className={`p-3 rounded-full flex-shrink-0 transition-all ${
-              inputMessage.trim() || uploadedFiles.length > 0
-                ? "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {isTyping ? (
-              <Loader2 className="w-6 h-6 animate-spin" />
-            ) : (
-              <Send className="w-6 h-6" />
-            )}
-          </button>
+          {/* Send Button (hidden when empty) */}
+          {(inputMessage.trim() || uploadedFiles.length > 0) && (
+            <button
+              onClick={sendMessage}
+              className="p-2 rounded-full flex-shrink-0 transition-all text-white"
+              style={{ backgroundColor: "#20253F" }}
+            >
+              {isTyping ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
+            </button>
+          )}
         </div>
-
-        {/* Info Text */}
-        <p className="text-xs text-gray-500 mt-3 text-center">
-          {t("chat.info_secure")}
-        </p>
-        {isSpeaking && (
-          <p className="text-xs text-blue-600 font-medium mt-2 text-center animate-pulse">
-            {t("chat.bot_speaking")}
-          </p>
-        )}
       </div>
     </div>
   );
