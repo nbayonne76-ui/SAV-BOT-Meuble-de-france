@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Send,
-  Camera,
+  Mic,
   X,
   Loader2,
 } from "lucide-react";
@@ -16,6 +16,7 @@ const ChatInterface = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [sessionId] = useState(`session-${Date.now()}`);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const { language, t } = useLanguage();
   const selectedLanguage = language;
   const messagesEndRef = useRef(null);
@@ -347,27 +348,26 @@ const ChatInterface = () => {
         backgroundColor: "#f5f5f5",
       }}
     >
-      {/* Header avec logo Mobilier de France */}
-      <div className="bg-white py-4 px-6 shadow-sm border-b border-gray-200">
+      {/* Header avec logo Mobilier de France - Fond bleu fonce */}
+      <div className="py-8 px-6" style={{ backgroundColor: "#20253F" }}>
         <div className="flex items-center justify-center">
-          <h1 className="text-2xl font-light tracking-wide" style={{ color: "#20253F" }}>
-            <span className="font-bold text-3xl" style={{ fontFamily: "serif" }}>M</span>
-            <span className="font-light">obilier de </span>
-            <span className="font-bold text-3xl" style={{ fontFamily: "serif" }}>F</span>
-            <span className="font-light">rance</span>
+          <h1 className="text-2xl font-light tracking-wide text-white">
+            <span className="font-bold text-4xl" style={{ fontFamily: "serif" }}>M</span>
+            <span className="font-bold text-4xl mr-1" style={{ fontFamily: "serif" }}>F</span>
+            <span className="font-light text-xl">Mobilier de France</span>
           </h1>
         </div>
       </div>
 
-      {/* Barre de navigation bleue */}
-      <div className="h-2" style={{ backgroundColor: "#20253F" }}></div>
-
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Section - SUIVI CLIENTELE */}
-        <div className="w-1/3 flex flex-col items-center justify-center p-6">
+        {/* Left Section - Empty space */}
+        <div className="w-1/4"></div>
+
+        {/* Center Section - SUIVI CLIENTELE */}
+        <div className="w-1/4 flex flex-col items-center justify-center p-6">
           <h2
-            className="text-xl font-semibold tracking-wide mb-2"
+            className="text-lg font-semibold tracking-wide mb-2 underline"
             style={{ color: "#20253F" }}
           >
             SUIVI CLIENTELE
@@ -387,7 +387,7 @@ const ChatInterface = () => {
         </div>
 
         {/* Right Section - Chat Messages */}
-        <div className="w-2/3 flex flex-col p-4">
+        <div className="w-1/2 flex flex-col p-4">
           <div className="flex-1 overflow-y-auto space-y-3">
             {messages.map((msg, index) => (
               <div
@@ -531,7 +531,7 @@ const ChatInterface = () => {
             className="text-gray-400 hover:text-gray-600 p-2 transition-colors flex-shrink-0"
             title={t("chat.add_photos")}
           >
-            <Camera className="w-6 h-6" />
+            <Mic className="w-6 h-6" />
           </button>
           <input
             ref={fileInputRef}
@@ -542,16 +542,21 @@ const ChatInterface = () => {
             onChange={handleFileUpload}
           />
 
-          {/* Message Input */}
+          {/* Message Input - Gris qui devient bleu au focus */}
           <div className="flex-1">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
               placeholder="Si vous preferez l'ecrit : n° de commande + Nom client + Description de votre attente"
-              className="w-full border border-gray-300 rounded-full px-5 py-3 focus:outline-none focus:ring-1 focus:ring-gray-400 text-gray-600 text-sm"
-              style={{ color: "#6B7280" }}
+              className={`w-full border rounded-full px-5 py-3 focus:outline-none transition-colors text-sm ${
+                isInputFocused
+                  ? "border-blue-500 text-blue-600"
+                  : "border-gray-300 text-gray-500"
+              }`}
             />
           </div>
 
