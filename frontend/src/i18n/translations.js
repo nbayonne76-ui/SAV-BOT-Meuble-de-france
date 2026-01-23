@@ -8,9 +8,9 @@ const translations = {
   fr: {
     chat: {
       welcome: {
-        long: `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.\nNous sommes à votre écoute pour un accompagnement personnalisé.\n\nPour vous aider rapidement, donnez-moi :\n• Votre nom\n• Votre numéro de commande\n• Une description de votre problème\n\nVous pouvez écrire ou utiliser le microphone 🎤`,
+        long: `Bonjour et bienvenue au service clientèle du groupe Mobilier de France.\nNous sommes à votre écoute pour un accompagnement personnalisé.\n\nPour vous aider rapidement, donnez-moi :\n• Votre numéro de commande ⭐ (prioritaire)\n• Votre nom\n• Une description de votre problème\n\nVous pouvez écrire ou utiliser le microphone 🎤`,
         short:
-          "Bonjour et bienvenue au service clientèle du groupe Mobilier de France. Nous sommes à votre écoute pour un accompagnement personnalisé. Pour vous aider rapidement, donnez-moi votre nom, votre numéro de commande, et une description de votre problème.",
+          "Bonjour et bienvenue au service clientèle du groupe Mobilier de France. Nous sommes à votre écoute pour un accompagnement personnalisé. Pour vous aider rapidement, donnez-moi votre numéro de commande (prioritaire), votre nom, et une description de votre problème.",
       },
       voice_on: "Voix ON",
       voice_off: "Voix OFF",
@@ -107,8 +107,8 @@ const translations = {
 Nous sommes à votre écoute pour un accompagnement personnalisé.
 
 Pour vous aider rapidement, donnez-moi :
+• Votre numéro de commande ⭐ (prioritaire)
 • Votre nom
-• Votre numéro de commande
 • Une description de votre problème
 
 Vous pouvez écrire ou utiliser le microphone 🎤`,
@@ -202,9 +202,9 @@ Vous pouvez écrire ou utiliser le microphone 🎤`,
   en: {
     chat: {
       welcome: {
-        long: `Hello and welcome to Mobilier de France customer support. We are here to help you.\n\nTo assist quickly, please provide:\n• Your name\n• Your order number\n• A description of your issue\n\nYou can type or use the microphone 🎤`,
+        long: `Hello and welcome to Mobilier de France customer support. We are here to help you.\n\nTo assist quickly, please provide:\n• Your order number ⭐ (priority)\n• Your name\n• A description of your issue\n\nYou can type or use the microphone 🎤`,
         short:
-          "Hello and welcome to Mobilier de France customer support. Please provide your name, order number and issue description.",
+          "Hello and welcome to Mobilier de France customer support. Please provide your order number (priority), your name, and issue description.",
       },
       voice_on: "Voice ON",
       voice_off: "Voice OFF",
@@ -292,8 +292,8 @@ Vous pouvez écrire ou utiliser le microphone 🎤`,
       welcome_message_reset: `Hello and welcome to Mobilier de France customer support. We are here to help you.
 
 To assist quickly, please provide:
+• Your order number ⭐ (priority)
 • Your name
-• Your order number
 • A description of your issue
 
 You can type or use the microphone 🎤`,
@@ -362,9 +362,9 @@ You can type or use the microphone 🎤`,
   ar: {
     chat: {
       welcome: {
-        long: `مرحبًا بك في خدمة عملاء مجموعة Mobilier de France. نحن هنا لمساعدتك.\n\nللمساعدة السريعة، يرجى تقديم:\n• اسمك\n• رقم الطلب\n• وصف المشكلة\n\nيمكنك الكتابة أو استخدام الميكروفون 🎤`,
+        long: `مرحبًا بك في خدمة عملاء مجموعة Mobilier de France. نحن هنا لمساعدتك.\n\nللمساعدة السريعة، يرجى تقديم:\n• رقم الطلب ⭐ (أولوية)\n• اسمك\n• وصف المشكلة\n\nيمكنك الكتابة أو استخدام الميكروفون 🎤`,
         short:
-          "مرحبًا بك في خدمة عملاء Mobilier de France. الرجاء تقديم اسمك ورقم الطلب ووصف المشكلة.",
+          "مرحبًا بك في خدمة عملاء Mobilier de France. الرجاء تقديم رقم الطلب (أولوية) واسمك ووصف المشكلة.",
       },
       voice_on: "الصوت مفعل",
       voice_off: "الصوت متوقف",
@@ -449,8 +449,8 @@ You can type or use the microphone 🎤`,
       welcome_message_reset: `مرحبًا بك في خدمة عملاء مجموعة Mobilier de France. نحن هنا لمساعدتك.
 
 للمساعدة السريعة، يرجى تقديم:
+• رقم الطلب ⭐ (أولوية)
 • اسمك
-• رقم الطلب
 • وصف المشكلة
 
 يمكنك الكتابة أو استخدام الميكروفون 🎤`,
