@@ -384,12 +384,16 @@ const ChatInterface = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Section - Empty space */}
-        <div className="w-1/4"></div>
-
-        {/* Center Section - SUIVI CLIENTELE */}
-        <div className="w-1/4 flex flex-col items-center justify-center p-6">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* SUIVI CLIENTELE - Centré exactement au milieu de la page */}
+        <div
+          className="absolute flex flex-col items-center justify-center"
+          style={{
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
           <h2
             className="text-lg font-semibold tracking-wide mb-2 underline"
             style={{ color: "#20253F" }}
@@ -410,8 +414,8 @@ const ChatInterface = () => {
           </a>
         </div>
 
-        {/* Right Section - Chat Messages */}
-        <div className="w-1/2 flex flex-col p-4">
+        {/* Right Section - Chat Messages (prend la moitié droite) */}
+        <div className="w-1/2 ml-auto flex flex-col p-4">
           <div className="flex-1 overflow-y-auto space-y-3">
             {messages.map((msg, index) => (
               <div
