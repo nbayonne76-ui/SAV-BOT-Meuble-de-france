@@ -385,11 +385,11 @@ const ChatInterface = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* SUIVI CLIENTELE - Centré exactement au milieu de la page */}
+        {/* SUIVI CLIENTELE - Centré dans la moitié gauche de la page (25% = centre de 0-50%) */}
         <div
           className="absolute flex flex-col items-center justify-center"
           style={{
-            left: '50%',
+            left: '25%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
           }}
