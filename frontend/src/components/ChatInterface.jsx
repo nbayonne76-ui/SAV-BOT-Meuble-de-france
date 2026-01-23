@@ -427,10 +427,12 @@ const ChatInterface = () => {
                 <div
                   className={`max-w-[85%] rounded-lg p-4 ${
                     msg.role === "user"
-                      ? "text-white"
+                      ? "text-gray-900 border border-gray-300"
                       : "text-white"
                   }`}
-                  style={{ backgroundColor: "#20253F" }}
+                  style={{
+                    backgroundColor: msg.role === "user" ? "#FFFFFF" : "#20253F"
+                  }}
                 >
                   <p className="whitespace-pre-line leading-relaxed text-sm">
                     {msg.content}
