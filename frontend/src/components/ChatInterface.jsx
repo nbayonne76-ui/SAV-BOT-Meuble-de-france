@@ -556,31 +556,15 @@ const ChatInterface = () => {
       {/* Input Area - Style comme la capture d'écran */}
       <div className="bg-white p-4 border-t border-gray-200">
         <div className="flex items-center space-x-3 max-w-4xl mx-auto">
-          {/* Mic Button */}
+          {/* Mic Button - à gauche */}
           <button
             className="text-gray-400 hover:text-gray-600 p-2 transition-colors flex-shrink-0"
             title="Microphone"
           >
             <Mic className="w-6 h-6" />
           </button>
-          {/* Camera Button - Pour upload photos */}
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="text-gray-400 hover:text-gray-600 p-2 transition-colors flex-shrink-0"
-            title={t("chat.add_photos")}
-          >
-            <Camera className="w-6 h-6" />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*,video/*"
-            className="hidden"
-            onChange={handleFileUpload}
-          />
 
-          {/* Message Input - Gris qui devient bleu au focus */}
+          {/* Message Input - au centre */}
           <div className="flex-1">
             <input
               type="text"
@@ -597,6 +581,23 @@ const ChatInterface = () => {
               }`}
             />
           </div>
+
+          {/* Camera Button - à droite pour upload photos */}
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="text-gray-400 hover:text-gray-600 p-2 transition-colors flex-shrink-0"
+            title={t("chat.add_photos")}
+          >
+            <Camera className="w-6 h-6" />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={handleFileUpload}
+          />
 
           {/* Send Button (hidden when empty) */}
           {(inputMessage.trim() || uploadedFiles.length > 0) && (
