@@ -349,13 +349,37 @@ const ChatInterface = () => {
       }}
     >
       {/* Header avec logo Mobilier de France - Fond bleu fonce */}
-      <div className="py-8 px-6" style={{ backgroundColor: "#20253F" }}>
-        <div className="flex items-center justify-center">
-          <h1 className="text-2xl font-light tracking-wide text-white">
-            <span className="font-bold text-4xl" style={{ fontFamily: "serif" }}>M</span>
-            <span className="font-bold text-4xl mr-1" style={{ fontFamily: "serif" }}>F</span>
-            <span className="font-light text-xl">Mobilier de France</span>
-          </h1>
+      <div className="py-6 px-6" style={{ backgroundColor: "#20253F" }}>
+        <div className="flex items-center justify-center gap-2">
+          {/* Logo MF stylise en SVG */}
+          <svg
+            width="50"
+            height="40"
+            viewBox="0 0 50 40"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="flex-shrink-0"
+          >
+            {/* M stylise */}
+            <path
+              d="M2 38V8L14 24L26 8V38"
+              stroke="white"
+              strokeWidth="3"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* F stylise */}
+            <path
+              d="M32 38V8H48M32 22H44"
+              stroke="white"
+              strokeWidth="3"
+              fill="none"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-white text-xl font-light tracking-wide">Mobilier de France</span>
         </div>
       </div>
 
