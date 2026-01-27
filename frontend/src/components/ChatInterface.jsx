@@ -1,13 +1,8 @@
 // frontend/src/components/ChatInterface.jsx
 import { useState, useEffect, useRef } from "react";
-import {
-  Send,
-  Mic,
-  Camera,
-  X,
-  Loader2,
-} from "lucide-react";
+import { Send, Mic, Camera, X, Loader2 } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
+import MfLogo from "../assets/MF.png";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
 
@@ -84,7 +79,7 @@ const ChatInterface = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
 
       // Attempt to parse body regardless of status for better error messages
@@ -94,7 +89,7 @@ const ChatInterface = () => {
         console.error(
           "Validation error response:",
           response.status,
-          responseBody
+          responseBody,
         );
         const serverMsg =
           responseBody?.detail ||
@@ -128,7 +123,7 @@ const ChatInterface = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-        }
+        },
       );
 
       // Attempt to parse body regardless of status for better error messages
@@ -212,7 +207,7 @@ const ChatInterface = () => {
         // Attendre 3 secondes puis effacer la conversation
         setTimeout(async () => {
           console.log(
-            "👋 Clôture de la conversation - Effacement des messages"
+            "👋 Clôture de la conversation - Effacement des messages",
           );
           setMessages([]);
 
@@ -300,7 +295,7 @@ const ChatInterface = () => {
         alert(
           t("chat.upload_file_too_large")
             .replace("{name}", file.name)
-            .replace("{max}", "10")
+            .replace("{max}", "10"),
         );
         return false;
       }
@@ -352,35 +347,14 @@ const ChatInterface = () => {
       {/* Header avec logo Mobilier de France - Fond bleu fonce */}
       <div className="py-6 px-6" style={{ backgroundColor: "#20253F" }}>
         <div className="flex items-center justify-center gap-2">
-          {/* Logo MF stylise en SVG */}
-          <svg
-            width="50"
-            height="40"
-            viewBox="0 0 50 40"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            className="flex-shrink-0"
-          >
-            {/* M stylise */}
-            <path
-              d="M2 38V8L14 24L26 8V38"
-              stroke="white"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* F stylise */}
-            <path
-              d="M32 38V8H48M32 22H44"
-              stroke="white"
-              strokeWidth="3"
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <span className="text-white text-xl font-light tracking-wide">Mobilier de France</span>
+          <img
+            src={MfLogo}
+            alt="Mobilier de France"
+            className="h-12 w-auto object-contain transition-transform hover:scale-105 flex-shrink-0"
+          />
+          <span className="text-white text-xl font-light tracking-wide">
+            Mobilier de France
+          </span>
         </div>
       </div>
 
@@ -390,9 +364,9 @@ const ChatInterface = () => {
         <div
           className="absolute flex flex-col items-center justify-center"
           style={{
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
           }}
         >
           <h2
@@ -408,7 +382,7 @@ const ChatInterface = () => {
             onClick={(e) => {
               e.preventDefault();
               // Navigate to voice interface
-              window.location.href = '/voice';
+              window.location.href = "/voice";
             }}
           >
             Interface vocale dynamique
@@ -432,7 +406,8 @@ const ChatInterface = () => {
                       : "text-white"
                   }`}
                   style={{
-                    backgroundColor: msg.role === "user" ? "#FFFFFF" : "#20253F"
+                    backgroundColor:
+                      msg.role === "user" ? "#FFFFFF" : "#20253F",
                   }}
                 >
                   <p className="whitespace-pre-line leading-relaxed text-sm">
