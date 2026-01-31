@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     ALLOWED_EXTENSIONS: str = Field(default="jpg,jpeg,png,heic,mp4,mov,avi", env="ALLOWED_EXTENSIONS")
 
     # CORS
-    CORS_ORIGINS: str = Field(default="http://localhost:5173,http://localhost:3000", env="CORS_ORIGINS")
+    CORS_ORIGINS: str = Field(default="http://localhost:5173,http://localhost:3000,http://localhost:8080", env="CORS_ORIGINS")
 
     # Application
     APP_NAME: str = Field(default="Meuble de France Chatbot", env="APP_NAME")
