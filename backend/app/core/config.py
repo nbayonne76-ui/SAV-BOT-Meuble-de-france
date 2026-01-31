@@ -225,7 +225,8 @@ class Settings:
         "http://127.0.0.1:5176,"
         "http://127.0.0.1:3000,"
         "http://127.0.0.1:8080,"
-        "https://proactive-nurturing-production.up.railway.app"
+        "https://proactive-nurturing-production.up.railway.app,"
+        "https://radiant-canvas-production.up.railway.app,"
             )
         )
         # ===================
