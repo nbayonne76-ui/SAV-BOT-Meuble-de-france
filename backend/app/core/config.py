@@ -227,6 +227,10 @@ class Settings:
                 "https://proactive-nurturing-production.up.railway.app/chat,"
                 "https://proactive-nurturing-production.up.railway.app/voice,"
                 "https://proactive-nurturing-production.up.railway.app/dashboard,"
+                "http://localhost:8080,"
+                "http://localhost:8080/chat,"
+                "http://localhost:8080/voice,"
+                "http://localhost:8080/dashboard,"
             )
         )
         # ===================
